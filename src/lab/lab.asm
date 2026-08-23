@@ -71,7 +71,7 @@ SECTION "Lab State", WRAM0[$D8C1]
 wLabState::
 
 ; Level picker, shown in a single cell to the right of the original 0-9 grid.
-wLabFocus::        db        ; 0 grid, 1 level, 2-5 the four seed digits
+wLabFocus::        db        ; 0 grid, 1 level
 wLabPickerLevel::  db        ; 0-22, shown as 0-9 then A-M
 wLabBlinkTimer::   db        ; frame counter for the focus blink
 wLabBlinkPhase::   db        ; current blink phase
@@ -85,24 +85,28 @@ wLabRedrawPending:: db
 ; level select starting a game, which reaches the same state.
 wLabRestarting:: db
 
-; SPS state. Sixteen bits, low byte first, matching the community's seeded ROM.
-; $0000 is degenerate - period 1, always returns zero - so seeds are forced
-; non-zero when set. See docs/existing-hacks.md section 4.2.
-wLabRngLo:: db
-wLabRngHi:: db
+; SPS state. Twenty-four bits, high byte first, matching Toni's layout - his
+; own code notes that mid and low must be consecutive addresses, and keeping
+; that order lets a nibble index address its byte by a shift rather than a
+; branch. $000000 is degenerate - period 1, always returns zero - so it is
+; spent as the "off" value. See docs/existing-hacks.md section 4.2.
+wLabRngHi::  db
+wLabRngMid:: db
+wLabRngLo::  db
 
 ; The seed as configured on the menu, copied into the LFSR at the start of every
 ; game. Kept separate because the LFSR state advances during play, and a restart
 ; must repeat the sequence rather than continue it.
-wLabSeedLo:: db
-wLabSeedHi:: db
+wLabSeedHi::  db
+wLabSeedMid:: db
+wLabSeedLo::  db
 
 ; Lab menu. wLabMode is the row the cursor sits on, and survives into the game
 ; so trainers can ask which drill is running.
 wLabMode::        db        ; MODE_TETRIS / MODE_BTYPE / MODE_TRANSITION
 wLabDrillPending:: db       ; set at game init, consumed on the first game frame
 wLabDrillLevel::  db        ; the level the TRANSITION row is set to
-wLabSeedDigit::   db        ; 0-3 while editing the seed row, else SEED_IDLE
+wLabSeedDigit::   db        ; 0-5 while editing the seed row, else SEED_IDLE
 
 ; The controller as the player actually held it, before LabSuppressPushdown
 ; edits it. Anything that wants to *show* the input - toni asked for an input
@@ -130,7 +134,7 @@ wLabScoreZeroMoved:: db
 ; them. See LabFileHighScore.
 wLabHiScoreMillions:: ds (MAX_LEVEL + 1) * 3
 
-	ds 936
+	ds 934
 wLabStateEnd::
 
 ; ---------------------------------------------------------------------------
@@ -602,17 +606,7 @@ LabAdjustSeedNibble::
 	ld   d, a                       ; d = new nibble
 
 ; rebuild the byte the digit lives in
-	ld   a, c
-	cp   2
-	jr   c, .highByte
-
-	ld   hl, wLabSeedLo
-	jr   .haveByte
-
-.highByte:
-	ld   hl, wLabSeedHi
-
-.haveByte:
+	call LabSeedNibbleByte
 	ld   a, c
 	and  1                          ; 0 = upper nibble, 1 = lower
 	jr   nz, .lowerNibble
@@ -632,24 +626,27 @@ LabAdjustSeedNibble::
 	ret
 
 
-; Nibble C (0-3, leftmost first) of the seed, returned in A.
+; Nibble C (0-5, leftmost first) of the seed, returned in A.
 LabReadSeedNibble::
-	ld   a, c
-	cp   2
-	jr   c, .fromHigh
-	ld   a, [wLabSeedLo]
-	jr   .haveByte
-
-.fromHigh:
-	ld   a, [wLabSeedHi]
-
-.haveByte:
+	call LabSeedNibbleByte
+	ld   a, [hl]
 	bit  0, c
 	jr   nz, .lower
 	swap a
 
 .lower:
 	and  $0f
+	ret
+
+
+; HL = the byte nibble C lives in. The three seed bytes are stored high first,
+; so the byte is simply C/2 along - which is why they are in that order.
+LabSeedNibbleByte::
+	ld   a, c
+	srl  a
+	add  LOW(wLabSeedHi)
+	ld   l, a
+	ld   h, HIGH(wLabSeedHi)
 	ret
 
 
@@ -1025,6 +1022,14 @@ DEF MENU_ROW0       EQU _SCRN0 + 6 * 32 + 3   ; first entry
 DEF MENU_STRIDE     EQU 2 * 32                ; a blank line between entries
 DEF MENU_TEXT_COL   EQU 2                     ; label starts 2 cells in
 DEF MENU_VALUE_COL  EQU 13                    ; the row's value, right of it
+
+; Six hex digits will not fit where the other rows put their value: the menu
+; starts at column 3, so MENU_VALUE_COL lands on column 16 and four digits
+; already reach the right edge of the screen. The seed row alone starts two
+; cells earlier. Its label ends at column 8, so nothing is in the way, and no
+; other row moves.
+DEF MENU_SEED_COL   EQU 11
+DEF SEED_DIGITS     EQU 6
 DEF MENU_CURSOR     EQU $26                   ; the font's "*"
 DEF SEED_IDLE       EQU $ff                   ; wLabSeedDigit when not editing
 
@@ -1237,7 +1242,7 @@ LabMenuInput::
 	bit  PADB_RIGHT, c
 	jr   z, .seedNotRight
 	ld   a, d
-	cp   3
+	cp   SEED_DIGITS - 1
 	ret  nc
 	inc  a
 	ld   [wLabSeedDigit], a
@@ -1448,6 +1453,14 @@ LabMenuValueCell::
 	ret
 
 
+; The seed row's first digit cell - two columns left of every other row's value,
+; because six digits do not fit where four did.
+LabMenuSeedCell::
+	ld   hl, MENU_SEED_COL
+	add  hl, de
+	ret
+
+
 ; 0-9 then A-M: the font puts those tiles at $00-$16, so the tile is the level.
 LabMenuPaintLevel::
 	call LabMenuValueCell
@@ -1457,7 +1470,7 @@ LabMenuPaintLevel::
 
 ; Four hex digits; the tile is the nibble. The digit being edited blinks.
 LabMenuPaintSeed::
-	call LabMenuValueCell
+	call LabMenuSeedCell
 	push de
 	ld   d, h
 	ld   e, l
@@ -1485,7 +1498,7 @@ LabMenuPaintSeed::
 	inc  de
 	inc  c
 	ld   a, c
-	cp   4
+	cp   SEED_DIGITS
 	jr   c, .digit
 	pop  de
 	ret
@@ -1932,11 +1945,15 @@ LabInGameReset::
 ; state can never be reached - it is spent as the "no seed" value instead of
 ; being a trap the way it is in the community's ROM (docs/existing-hacks.md 4.2).
 LabArmSeed::
-	ld   a, [wLabSeedLo]
-	ld   [wLabRngLo], a
-	ld   b, a
 	ld   a, [wLabSeedHi]
 	ld   [wLabRngHi], a
+	ld   b, a
+	ld   a, [wLabSeedMid]
+	ld   [wLabRngMid], a
+	or   b
+	ld   b, a
+	ld   a, [wLabSeedLo]
+	ld   [wLabRngLo], a
 	or   b                          ; seed zero?
 	ldh  [hLabSpsEnabled], a        ; non-zero arms it, zero disarms it
 	ret  z

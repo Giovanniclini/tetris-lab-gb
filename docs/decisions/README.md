@@ -14,3 +14,4 @@ choice would otherwise have to be re-derived — or, worse, silently reversed.
 | [7](0007-lab-menu-mirrors-tetrisgym.md) | The Lab menu is TetrisGYM's list, on the screen the game already had |
 | [8](0008-retire-the-hook-count-budget.md) | The hook count is not the budget; the diff test is |
 | [9](0009-entering-an-original-routine-partway.md) | Entering an original routine partway, when its entry point is a register contract |
+| [10](0010-seeds-are-toni-24-bit.md) | Seeds are Toni's 24-bit LFSR, six hex digits |

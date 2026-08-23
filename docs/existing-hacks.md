@@ -228,19 +228,34 @@ The title screen gains a **`SEED 0000`** field — a 16-bit seed as four hex dig
 state width. The routine at `$0555` drives `rSB`/`rSC`, so the ROM **exchanges seeds over the link
 cable**, which is what Muf meant by *"automatically synchronise SPS seeds"* (§3.5.3).
 
-### 4.4 Recommendation: adopt this LFSR exactly
+### 4.4 Superseded: the 24-bit LFSR
 
-**Implement the identical LFSR with identical state semantics.** If we do, a given seed produces the
-*same piece sequence* on our ROM as on theirs — so a player on the seeded ROM and a player on
-TetrisGYM-GB can play the same seed against each other. For a feature whose entire purpose is
-fairness between two players, **interoperability is the feature**. An objectively better PRNG that
-produced different sequences would be worse.
+**We ship Toni's 24-bit LFSR, not the 16-bit one above.** He sent the source on 2026-08-22, after
+Tolstoj asked us to move to six-digit seeds; nobody used the four-digit ones, so there was no
+compatibility to preserve.
 
-This also supersedes the plan in `docs/architecture.md` §4.2 to seed by filling the existing
-256-byte `wRandomness` table and forcing the `.predefined` branch. That approach was sound and
-cheap, but it would produce **different sequences** from the ROM the community already uses, and it
-inherits the 256-piece wrap problem. Hooking the entropy source is both simpler and compatible.
-`docs/research.md` §8 #3 (the wrap question) is moot under this design.
+```
+state   24 bits, high byte first
+step    feedback = parity(low & $87) into bit 23, whole state shifts right one
+output  the new low byte, where the game reads rDIV
+seed    loaded raw; $000000 means SPS off
+```
+
+`$87` is x^24 + x^7 + x^2 + x + 1 — **primitive, period 16 777 215**, verified by walking the whole
+cycle. His file references `LFSR_MASK_LOW` without defining it; the value was recovered from the
+four recorded piece sequences he sent with it. All 1023 written pieces across four seeds match; the
+next-best of 256 candidates matched 14. `tests/test_lfsr_vectors.py` keeps those sequences as the
+acceptance test.
+
+**Why his and not a better one.** For a fairness mechanism interoperability *is* the feature: a
+seed must deal the same pieces on both ROMs or the number is worthless the moment it is shared.
+Any maximal-length 24-bit LFSR is statistically equivalent, so there was nothing to gain and a
+community split to lose.
+
+This supersedes the plan in `docs/architecture.md` §4.2 to seed by filling the 256-byte
+`wRandomness` table and forcing the `.predefined` branch. That was sound and cheap, but it would
+produce different sequences and inherits the 256-piece wrap problem. `docs/research.md` §8 #3 is
+moot under this design.
 
 ## 5. The sprint / qualification ROMs
 

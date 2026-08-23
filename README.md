@@ -275,9 +275,13 @@ Nintendo, The Tetris Company or any rights holder.
 * **The GBTetris community's romhackers**, whose work this is built on top of in three concrete
   places. The **KLM romhack** — Ospin, Tolstoj, Pascal and Hepps in lineage — established levels
   `A`–`M`; our `L` and `M` gravity values match it exactly, and so does the way we stop levelling
-  at 20 or above, so a practice level means the same thing on both. The 16-bit **LFSR** came from
-  the seeded ROM in circulation, transcribed byte for byte rather than replaced — **found by
-  Ospin**, who dug it out of the public literature rather than writing it.
+  at 20 or above, so a practice level means the same thing on both. The 16-bit **LFSR** we shipped
+  first came from the seeded ROM in circulation — **found by Ospin**, who dug it out of the public
+  literature rather than writing it — and has since been replaced by Toni's 24-bit one.
+* **Toni**, for the **24-bit LFSR the seeded mode runs on** — his design, his source, sent so the
+  two ROMs would deal the same pieces rather than each inventing its own. Also for the recorded
+  piece sequences in `tests/vectors/toni-seeds.txt`: four seeds and the pieces each deals, dumped
+  from BGB, which are what prove ours matches his.
 * **Tolstoj**, for the reverse-engineering conversations, for the standing offer to hand off KLM
   hosting, and for reporting the SPS reset bug that our own tests could not see
   (`docs/existing-hacks.md`)

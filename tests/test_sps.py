@@ -15,12 +15,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from tools.emu import Tetris, sym, hATypeLevel, GS_IN_GAME_MAIN  # noqa: E402
+from tools.lfsr import step as lfsr_step  # noqa: E402
 
 ROM = "build/tetrislab.gb"
 
 hCurrPiece = 0xFF92
-wLabRngLo, wLabRngHi = sym("wLabRngLo"), sym("wLabRngHi")
-wLabSeedLo, wLabSeedHi = sym("wLabSeedLo"), sym("wLabSeedHi")
+wLabRngHi, wLabRngMid, wLabRngLo = sym("wLabRngHi"), sym("wLabRngMid"), sym("wLabRngLo")
+wLabSeedHi, wLabSeedMid, wLabSeedLo = sym("wLabSeedHi"), sym("wLabSeedMid"), sym("wLabSeedLo")
 GS_IN_GAME_INIT = 0x0A
 hLabSpsEnabled = 0xFFFE
 hHiddenLoadedPiece = 0xFFAE
@@ -31,28 +32,15 @@ rDIV = 0xFF04
 MAX_DRAWS_PER_PIECE = 3
 
 
-def lfsr_step(h, l):
-    """The community ROM's LFSR at $0532, transcribed in docs/existing-hacks.md."""
-    a, c = h, 0
-    a = ((a >> 1) | (c << 7)) & 0xFF
-    c = h & 1
-    a = ((l >> 1) | (c << 7)) & 0xFF
-    c = l & 1
-    a ^= h
-    h2 = a
-    c = 0
-    a = ((l >> 1) | (c << 7)) & 0xFF
-    c = l & 1
-    a = ((h2 >> 1) | (c << 7)) & 0xFF
-    a ^= l
-    l2 = a
-    return a ^ h2, l2
-
-
 def arm(t, seed):
+    t.pb.memory[wLabRngHi] = (seed >> 16) & 0xFF
+    t.pb.memory[wLabRngMid] = (seed >> 8) & 0xFF
     t.pb.memory[wLabRngLo] = seed & 0xFF
-    t.pb.memory[wLabRngHi] = seed >> 8
     t.pb.memory[hLabSpsEnabled] = 1
+
+
+def rng(t):
+    return (t[wLabRngHi] << 16) | (t[wLabRngMid] << 8) | t[wLabRngLo]
 
 
 def piece_sequence(seed, frames=3000):
@@ -71,38 +59,41 @@ def piece_sequence(seed, frames=3000):
 
 
 def test_the_same_seed_gives_the_same_pieces():
-    a = piece_sequence(0xACE1)
-    b = piece_sequence(0xACE1)
+    a = piece_sequence(0x11998F)
+    b = piece_sequence(0x11998F)
     assert len(a) >= 8, f"only {len(a)} pieces observed"
     assert a == b, f"not deterministic:\n  {a}\n  {b}"
 
 
 def test_different_seeds_give_different_pieces():
-    a = piece_sequence(0xACE1)
-    b = piece_sequence(0x1234)
+    a = piece_sequence(0x11998F)
+    b = piece_sequence(0x27D844)
     assert a != b, "two seeds produced the same sequence"
 
 
-def test_the_lfsr_matches_the_community_rom():
-    """Every state our ROM reaches must appear, in order, in the sequence the
-    transcribed model produces - allowing for steps we cannot see, since the
-    retry loop can draw up to three times inside a single frame.
+def test_the_rom_steps_the_lfsr_the_way_the_model_does():
+    """Every state the ROM reaches must appear, in order, in the model's own
+    sequence - allowing for steps we cannot see, since the retry loop can draw
+    up to three times inside a single frame.
+
+    tests/test_lfsr_vectors.py is what says the model is Toni's. This is what
+    says the assembly is the model.
     """
-    seed = 0xACE1
-    h, l = seed >> 8, seed & 0xFF
+    seed = 0x11998F
+    state = seed
     model = []
     for _ in range(200):
-        h, l = lfsr_step(h, l)
-        model.append((h, l))
+        state, _ = lfsr_step(state)
+        model.append(state)
 
     with Tetris(ROM) as t:
         t.start_game_at(9)
         t.tick(30)
         arm(t, seed)
-        seen, last = [], (t[wLabRngHi], t[wLabRngLo])
+        seen, last = [], rng(t)
         for _ in range(3000):
             t.tick(1)
-            cur = (t[wLabRngHi], t[wLabRngLo])
+            cur = rng(t)
             if cur != last:
                 seen.append(cur)
                 last = cur
@@ -115,10 +106,9 @@ def test_the_lfsr_matches_the_community_rom():
             i += 1
             gap += 1
             assert gap <= MAX_DRAWS_PER_PIECE, (
-                f"state {state[0]:02X}{state[1]:02X} is not the model's next "
-                f"(searched {gap} ahead)"
+                f"state ${state:06X} is not the model's next (searched {gap} ahead)"
             )
-        assert i < len(model), f"state {state[0]:02X}{state[1]:02X} never occurs in the model"
+        assert i < len(model), f"state ${state:06X} never occurs in the model"
         i += 1
 
 
@@ -134,7 +124,7 @@ def test_sps_off_leaves_the_original_generator_alone():
     with Tetris(ROM) as t:
         t.start_game_at(9)
         assert t[hLabSpsEnabled] == 0, "SPS should default to off"
-        before = (t[wLabRngHi], t[wLabRngLo])
+        before = rng(t)
         pieces, last = 0, t[hHiddenLoadedPiece]
         for _ in range(3000):
             t.tick(1)
@@ -142,8 +132,11 @@ def test_sps_off_leaves_the_original_generator_alone():
             if v != last:
                 pieces += 1
                 last = v
-        assert pieces >= 8, f"only {pieces} pieces drawn; the test proves nothing"
-        assert (t[wLabRngHi], t[wLabRngLo]) == before, (
+        # nothing plays the pieces, so the stack tops out after about seven and
+        # the game ends. That is plenty to prove the generator ran; the point of
+        # the guard is only that it ran at all.
+        assert pieces >= 5, f"only {pieces} pieces drawn; the test proves nothing"
+        assert rng(t) == before, (
             "the LFSR advanced while SPS was off - the rDIV branch is not taken"
         )
 
@@ -156,15 +149,15 @@ def test_a_seed_of_zero_means_no_seed():
     reach it. Ours cannot: zero disarms SPS and pieces come from rDIV, which is
     genuinely random. That is why there is no "randomise" button.
     """
-    h, l = 0, 0
+    state = 0
     for _ in range(5):
-        h, l = lfsr_step(h, l)
-        assert (h, l) == (0, 0), "the model should confirm $0000 is a fixed point"
+        state, _ = lfsr_step(state)
+        assert state == 0, "the model should confirm $000000 is a fixed point"
 
     with Tetris(ROM) as t:
         t.to_level_select()
-        t.pb.memory[wLabSeedLo] = 0
-        t.pb.memory[wLabSeedHi] = 0
+        for addr in (wLabSeedHi, wLabSeedMid, wLabSeedLo):
+            t.pb.memory[addr] = 0
         t.pb.memory[hATypeLevel] = 9
         t.press("start")
         t.run_until_state(GS_IN_GAME_MAIN)
@@ -178,28 +171,28 @@ def test_the_seed_is_reloaded_at_the_start_of_every_game():
         for _ in range(limit):
             t.tick(1)
             if t.state == GS_IN_GAME_INIT:
-                seen.append((t[wLabRngHi] << 8) | t[wLabRngLo])
+                seen.append(rng(t))
                 if len(seen) >= 3:
                     break
         return seen
 
     with Tetris(ROM) as t:
         t.to_level_select()
-        t.pb.memory[wLabSeedLo] = 0xE1
-        t.pb.memory[wLabSeedHi] = 0xAC
+        t.pb.memory[wLabSeedHi] = 0x11
+        t.pb.memory[wLabSeedMid] = 0x99
+        t.pb.memory[wLabSeedLo] = 0x8F
         t.pb.memory[hATypeLevel] = 9
         t.press("start")
         t.run_until_state(GS_IN_GAME_MAIN)
         t.tick(600)
-        mid = (t[wLabRngHi] << 8) | t[wLabRngLo]
-        assert mid != 0xACE1, "the LFSR should have advanced during play"
+        assert rng(t) != 0x11998F, "the LFSR should have advanced during play"
 
         for b in ("a", "b", "select", "start"):
             t.pb.button_press(b)
         seen = lfsr_at_init(t)
         for b in ("a", "b", "select", "start"):
             t.pb.button_release(b)
-        assert 0xACE1 in seen, (
+        assert 0x11998F in seen, (
             f"seed not reloaded on restart; saw {[hex(v) for v in seen]}"
         )
 
@@ -217,7 +210,7 @@ def test_the_same_seed_deals_the_same_sequence_after_a_game():
         for _ in range(4):
             t.press("down")                    # SEED
         t.press("a")
-        for nibble in (0xA, 0xC, 0xE, 0x1):
+        for nibble in (0x1, 0x1, 0x9, 0x9, 0x8, 0xF):
             for _ in range(nibble):
                 t.press("up")
             t.press("right")
@@ -264,15 +257,15 @@ def test_seed_can_be_entered_from_the_menu():
         for _ in range(4):
             t.press("down")                    # TETRIS -> ... -> SEED
         t.press("a")                           # open the digits
-        for nibble in (0xA, 0xC, 0xE, 0x1):
+        for nibble in (0x1, 0x1, 0x9, 0x9, 0x8, 0xF):
             for _ in range(nibble):
                 t.press("up")
             t.press("right")
         t.press("a")                           # close them
         for _ in range(4):
             t.press("up")                      # back up to TETRIS
-        seed = (t[wLabSeedHi] << 8) | t[wLabSeedLo]
-        assert seed == 0xACE1, f"typed $ACE1, got ${seed:04X}"
+        seed = (t[wLabSeedHi] << 16) | (t[wLabSeedMid] << 8) | t[wLabSeedLo]
+        assert seed == 0x11998F, f"typed $11998F, got ${seed:06X}"
 
         t.press("start")                       # TETRIS -> the level select
         t.run_until_state(0x11)

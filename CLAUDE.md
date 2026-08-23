@@ -174,8 +174,8 @@ vendored approach cannot work.
 
 ### 10a. Credit the community's work, and ask before taking more
 
-Two things in this ROM are not ours: the **LFSR** is transcribed byte for byte from the
-community's seeded ROM, and the **L/M gravity values** match KLM by reverse engineering. Both are
+Two things in this ROM are not ours: the **LFSR** is Toni's 24-bit design, and the **L/M gravity
+values** match KLM by reverse engineering. Both are
 deliberate — interoperability is the point — and both must stay credited in `README.md` §Credits
 and in the source that uses them.
 

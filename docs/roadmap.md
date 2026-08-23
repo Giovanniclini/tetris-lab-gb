@@ -207,6 +207,11 @@ the original compares three bytes, so 1 000 050 stored as 000050 would have lost
 to 999 999. Only the comparison is ours — the shift, the name and the display
 stay the original's. No new hooks.
 
+**Status 2026-08-23:** seeds are six hex digits, running Toni's 24-bit LFSR
+(`docs/decisions/0010`). His four recorded sequences are the acceptance test —
+a seed deals the same pieces here as on his ROM, which is the whole point of
+SPS. Four-digit seeds from v0.3 and earlier do not carry over.
+
 **Status 2026-08-22:** the rocket scene is skipped whole — the 2.4-second wait
 and the twenty-odd seconds after it, at exactly the scores a good session
 produces. Every score now reaches the game over screen in two frames, by the

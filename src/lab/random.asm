@@ -2,22 +2,20 @@
 ;
 ; The original draws pieces from the hardware divider register: `ldh a, [rDIV]`
 ; inside a retry loop, once per attempt. Everything downstream - the x4 counting
-; loop, the bitwise-OR rejection test, the resulting 10.7/13.7/16.1% bias - is
-; left exactly as it was. Only the entropy source changes.
+; loop, the bitwise-OR rejection test, the resulting bias - is left exactly as
+; it was. Only the entropy source changes.
 ;
-; The LFSR below is NOT ours. It is transcribed byte for byte from the seeded
-; ROM already circulating in the GBTetris community (docs/existing-hacks.md
-; section 4). Ospin found it - it comes from the public literature rather than
-; being anyone's invention - and Tolstoj confirmed its provenance.
+; The generator below is NOT ours. It is Toni's 24-bit LFSR, sent as source on
+; 2026-08-22 (docs/existing-hacks.md section 4). His file omits the tap
+; constant; $87 was recovered from the four recorded piece sequences he sent
+; with it - all 1023 written pieces across four seeds, next-best candidate 14 -
+; and verified maximal, period 16 777 215. Polynomial x^24 + x^7 + x^2 + x + 1.
 ;
-; It is 16-bit, and the community is moving to 24 bits: Toni is building that,
-; and Tolstoj's guidance is to adopt it rather than keep this. Nobody uses the
-; four-digit seeds, so there is no compatibility to preserve.
-;
-; That it is theirs is the point: for a fairness mechanism, interoperability
-; *is* the feature. A given seed must produce the same pieces on our ROM as on
-; theirs, so an objectively better generator producing different sequences would
-; be worse.
+; That it is his is the point: for a fairness mechanism, interoperability *is*
+; the feature. A seed must deal the same pieces on our ROM as on his, so an
+; objectively better generator producing different sequences would be worse.
+; This replaces the community's 16-bit LFSR; nobody had four-digit seeds worth
+; preserving.
 ;
 ; Lives in the 42 bytes of empty space between the sound engine and the sound
 ; thunks in bank 1, so it needs no room in bank 0 and shifts nothing. Bank 1 is
@@ -40,55 +38,47 @@ LabRandom::
 	ld   b, a
 	ret
 
+; Toni's step, with his three hand-written shift blocks folded into three `rr`
+; instructions - rotate-right-through-carry is exactly a 24-bit shift with the
+; feedback entering at the top. Only H has to survive the call: the generator
+; keeps its retry count there, and writes D and E itself afterwards.
 .seeded:
 	push hl
-
 	ld   hl, wLabRngLo
-	ld   a, [hl+]
-	ld   h, [hl]                    ; h = high byte
-	ld   l, a                       ; l = low byte
+	ld   a, [hl]
+	ld   b, a                       ; the low byte, and the value we return
 
-; 16-bit LFSR, maximal length: period 65535 for any non-zero seed.
-	ld   a, h
-	rra
-	ld   a, l
-	rra
-	xor  h
-	ld   h, a
+; carry = parity of bits 0, 1, 2 and 7 - the taps of $87.
+;
+; `rlca` then `xor b` pairs every bit with the one below it, so bit 0 becomes
+; b7^b0 and bit 2 becomes b1^b2. Those two together are exactly the four taps,
+; so folding bit 2 onto bit 0 finishes it. Seven bytes rather than the twelve a
+; mask-and-fold takes, which is what makes this fit bank 1 at all.
+	rlca
+	xor  b
+	ld   d, a
+	rrca
+	rrca
+	xor  d
+	rrca                            ; and into the carry
 
-	ld   a, l
-	rra
-	ld   a, h
-	rra
-	xor  l
-	ld   l, a
-	xor  h
-	ld   h, a
+	dec  hl
+	ld   e, [hl]                    ; mid
+	dec  hl
+	ld   d, [hl]                    ; high
 
-	ld   a, h
-	ld   [wLabRngHi], a
-	ld   a, l
-	ld   [wLabRngLo], a
+	rr   d                          ; the 24-bit shift, feedback entering first
+	rr   e
+	rr   b
 
-	ld   b, a
+	ld   [hl], d
+	inc  hl
+	ld   [hl], e
+	inc  hl
+	ld   [hl], b
 	pop  hl
 	ret
 
-
-; ---------------------------------------------------------------------------
-; Bank 1 thunk
-;
-; LoadAsciiAndMenuScreenGfx lives in bank 0 but reads Gfx_Ascii from bank 1
-; ($415F), so it cannot be called while bank 2 is mapped - that address holds
-; Lab code. Bank-2 code must not switch banks itself (ADR 0001), so the call
-; happens from here, reached through FarCall with bank 1 selected.
-;
-; In the empty gap the linker reports between the demo steps and the demo piece
-; table. A new section in a hole, not an insertion.
-; ---------------------------------------------------------------------------
-
-; Two gaps, because neither is big enough alone: 32 bytes here and 10 at the
-; very end of the bank, past the sound thunks.
 
 SECTION "Lab Bank 1 Gfx Thunk", ROMX[$7FF6], BANK[1]
 

@@ -218,6 +218,16 @@ $0532  push af / push hl
 
 Transcribed and simulated: **maximal-length, period 65535** for any non-zero seed.
 
+**It is not a textbook polynomial.** An exhaustive sweep of all 32 768 Galois masks and all 32 768
+Fibonacci tap sets — both shift directions, either output byte, output taken before or after the
+step — reproduces it **zero times**. The `rra`/`xor` chain above is a hand-rolled byte-wise
+construction, not a shift register in standard form.
+
+That matters for anyone trying to identify a *related* generator from its output alone: the
+enumerable families do not contain even this one, so a null result against them says nothing about
+whether a candidate is an LFSR. Recovering a widened version of this construction from recorded
+pieces is program synthesis, not a parameter search. Ask the author instead.
+
 > **`$0000` is a degenerate seed — period 1, always returns `0`.** The title screen displays
 > `SEED 0000` as its default. This may be part of what nells meant by *"it's also not perfect SPS
 > iirc"*. Worth raising with the community, and worth guarding against in our own implementation.

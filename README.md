@@ -278,6 +278,9 @@ Nintendo, The Tetris Company or any rights holder.
   at 20 or above, so a practice level means the same thing on both. The 16-bit **LFSR** came from
   the seeded ROM in circulation, transcribed byte for byte rather than replaced — **found by
   Ospin**, who dug it out of the public literature rather than writing it.
+* **Toni**, for the recorded piece sequences in `tests/vectors/toni-seeds.txt` — four seeds and the
+  256 pieces each deals, dumped from BGB so a randomizer can be checked against his rather than
+  merely against itself.
 * **Tolstoj**, for the reverse-engineering conversations, for the standing offer to hand off KLM
   hosting, and for reporting the SPS reset bug that our own tests could not see
   (`docs/existing-hacks.md`)

@@ -15,3 +15,4 @@ choice would otherwise have to be re-derived — or, worse, silently reversed.
 | [8](0008-retire-the-hook-count-budget.md) | The hook count is not the budget; the diff test is |
 | [9](0009-entering-an-original-routine-partway.md) | Entering an original routine partway, when its entry point is a register contract |
 | [10](0010-seeds-are-toni-24-bit.md) | Seeds are Toni's 24-bit LFSR, six hex digits |
+| [11](0011-lab-code-is-modular.md) | Lab code is many small files, textually included into one section |

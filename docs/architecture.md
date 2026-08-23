@@ -42,7 +42,18 @@ tetris-lab-gb/
 │   │   ├── hooks.inc          the declared hook table
 │   │   └── trampoline.inc     FarCall and the state-dispatch stub
 │   └── lab/
-│       ├── lab.asm            dispatch, level picker, instant restart, Lab RAM
+│       ├── lab.asm            the include list, and nothing else
+│       ├── state.asm          every byte the Lab owns, HRAM and WRAM
+│       ├── dispatch.asm       opens the bank 2 section; one branch per hooked state
+│       ├── level_select.asm   the 0-9 grid plus the A-M level field
+│       ├── seed.asm           the six seed digits, and arming the LFSR
+│       ├── high_scores.asm    filing and drawing, seventh digit included
+│       ├── menu.asm           the title screen, replaced
+│       ├── drills.asm         trainers: TRANSITION so far
+│       ├── gameplay.asm       corrections to how the game plays
+│       ├── scoring.asm        the score's seventh digit on screen
+│       ├── rendering.asm      the two tilemap primitives
+│       ├── restart.asm        A+B+Select+Start restarts the drill
 │       ├── random.asm         the SPS LFSR (lives in bank 1's empty space)
 │       ├── gravity.inc        extended 23-entry gravity table
 │       ├── levels.inc         shared level constants

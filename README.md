@@ -152,7 +152,8 @@ instead of the hundred lines in front of it.
 
 Game Boy's transition is the level-up threshold, and the original treats your starting level as
 the number of tens to clear — so a level 9 start levels up at 100 lines and the drill begins at
-90. The row carries its own level and starts the game directly; instant restart then repeats
+90. Pick the level on the level select as usual; the row sets the score you start on, in hundreds
+of thousands, so 5 on level 18 is a maxout trainer. Instant restart then repeats
 the same drill.
 
 Modelled on TetrisGYM's `TRANSITION`, minus its score preset: that exists for NES's pace

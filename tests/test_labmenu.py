@@ -161,7 +161,7 @@ def test_settings_survive_a_round_trip_through_a_game():
             t.press("up")                      # first digit -> A
         t.press("a")
 
-        level, seed = t[sym("wLabDrillLevel")], t[sym("wLabSeedHi")]
+        level, seed = t[sym("wLabDrillScore")], t[sym("wLabSeedHi")]
         assert level == 7 and seed, f"setup failed: level {level}, seed hi ${seed:02X}"
 
         goto_row(t, MODE_TETRIS)
@@ -171,7 +171,7 @@ def test_settings_survive_a_round_trip_through_a_game():
         t.press("b")
         t.tick(40)
 
-        assert t[sym("wLabDrillLevel")] == level, "the transition level was reset"
+        assert t[sym("wLabDrillScore")] == level, "the transition value was reset"
         assert t[sym("wLabSeedHi")] == seed, "the seed was reset"
 
 
@@ -328,18 +328,76 @@ def test_music_is_a_setting_not_a_mode():
         )
 
 
-def _run_drill(t, level):
-    """The row carries its own level and starts the game directly - a drill you
-    set up once and repeat, with no level select in between."""
+def _run_drill(t, level, value=0):
+    """TRANSITION launches like every other row: the level comes from the level
+    select, and the row carries the trainer's own parameter - the score you
+    start on, in hundreds of thousands."""
     to_menu_row(t, MODE_TRANSITION)
-    for _ in range(level):
+    for _ in range(value):
         t.press("right")
-    assert t[sym("wLabDrillLevel")] == level, "the row did not take the level"
+    assert t[sym("wLabDrillScore")] == value, "the row did not take the value"
+    t.press("start")
+    t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+    t.tick(10)
+    t.pb.memory[hATypeLevel] = level     # as start_game_at does, cursor aside
     t.press("start")
     t.run_until_state(GS_IN_GAME_MAIN)
-    t.tick(25)
+    t.tick(12)
     assert t[hATypeLevel] == level, f"started on level {t[hATypeLevel]}"
     return int(f"{t[LINES_HI]:02X}{t[LINES_LO]:02X}")   # BCD -> decimal
+
+
+def _score(t):
+    low = int("".join(f"{t[0xC0A0 + 2 - i]:02X}" for i in range(3)))
+    return t[sym("wLabScoreMillions")] * 1000000 + low
+
+
+def test_the_row_presets_the_score_in_hundreds_of_thousands():
+    """TetrisGYM's Transition value is a starting score, not a level: set it to
+    5 and start on 18 for a maxout trainer (src/gamemodestate/initstate.asm).
+
+    Ten and above overflow into the seventh digit rather than writing a
+    non-decimal nibble into the top BCD byte."""
+    for value, want in ((0, 0), (5, 500000), (9, 900000),
+                        (10, 1000000), (15, 1500000)):
+        with Tetris(ROM) as t:
+            _run_drill(t, 9, value)
+            assert _score(t) == want, f"value {value} gave {_score(t)}"
+
+
+def test_the_preset_score_is_on_screen_before_a_piece_lands():
+    """The original only redraws the score when drop points land and the piece
+    has finished falling ($01DB), so a preset would sit invisible until the
+    first piece hit the ground. Reported by Giovanni."""
+    for value, want in ((0, "......0"), (5, ".500000"), (15, "1500000")):
+        with Tetris(ROM) as t:
+            _run_drill(t, 9, value)
+            row = "".join(
+                f"{t[0x9800 + 3 * 32 + c]:x}" if t[0x9800 + 3 * 32 + c] <= 9 else "."
+                for c in range(13, 20)
+            )
+            assert row == want, f"value {value} showed {row}, expected {want}"
+
+
+def test_the_row_stops_at_f():
+    """0-9 then A-F. TetrisGYM has one more, G, which turns its trainer off for
+    SXTOKL compatibility - a Game Genie code that changes the NES's
+    first-transition formula. The Game Boy has no such formula."""
+    with Tetris(ROM) as t:
+        to_menu_row(t, MODE_TRANSITION)
+        for _ in range(20):
+            t.press("right")
+        assert t[sym("wLabDrillScore")] == 0x0F, (
+            f"the row reached {t[sym('wLabDrillScore')]:#x}, should stop at $0F"
+        )
+
+
+def test_the_level_comes_only_from_the_level_select():
+    """The row used to carry a level too, which then disagreed with the level
+    select after a game over."""
+    with Tetris(ROM) as t:
+        _run_drill(t, 12, value=5)
+        assert t[hATypeLevel] == 12
 
 
 def test_transition_starts_ten_lines_short_of_the_level_up():

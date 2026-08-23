@@ -64,23 +64,33 @@ Chosen by community evidence — §6.2 ranks it third behind SPS and the level
 select, both already done, and it is the one thing a practitioner named
 unprompted as *"the most annoying thing"* in their routine.
 
-**`TRANSITION` carries its own level and starts the game directly**, with no
-level select in between — a drill you set up once and repeat, which is the whole
-point of it. Instant restart then re-runs the same drill for free, because the
-mode is still selected.
+**The level comes from the level select and nowhere else**, as it does for every
+TetrisGYM trainer: its game type menu does one `inc gameMode` on Start, landing
+on the level menu (`src/gamemode/gametypemenu/menu.asm`). Only Double Killscreen
+skips it, because that mode sets level 29 itself.
 
-`transitionModeSetup` (`src/gamemodestate/initstate.asm`) fills the line counter
-up to the last ten-line boundary before the level advances. The Game Boy's
-transition is that boundary: the original treats the start level as the number
-of tens to clear, so a level 9 start transitions at 100 lines and the drill
-begins at 90.
+**The row carries the trainer's own parameter: the score you start on, in
+hundreds of thousands.** Set it to 5 and start on 18 and you begin at 500 000,
+which is TetrisGYM's maxout trainer. `transitionModeSetup`
+(`src/gamemodestate/initstate.asm`) writes the value into the high nibble of the
+third BCD byte and presets the score from it; ours does the same into
+`wScoreBCD + 2` up to 9, then overflows into the seventh digit: `A` is
+1 000 000, `F` is 1 500 000. Writing `$A0` into a BCD byte the way theirs does
+would put a letter in the score.
 
-**One deliberate divergence: no score preset.** TetrisGYM's modifier sets a
-starting score so the score and pace readouts look like a real run at that
-point. The Game Boy has no pace display, and its transition point moves with the
-start level rather than being fixed at 19 — so the number has nothing to mean
-here. The level comes from the level picker instead, where the Game Boy already
-puts it.
+Their row has one more value, `G`, which turns the trainer off for Game Genie
+`SXTOKL` compatibility — a code that changes the NES's first-transition formula.
+The Game Boy levels up every ten lines from the start level and has no such
+formula, so ours stops at `F`.
+
+The line fill is theirs too: the counter goes to the last ten-line boundary
+before the level advances. The Game Boy's transition is that boundary — the
+original treats the start level as the number of tens to clear, so a level 9
+start transitions at 100 lines and the drill begins at 90.
+
+Topping out returns to the level select, which is also what TetrisGYM does
+(`src/gamemodestate/handlegameover.asm` sets `gameMode` to `levelMenu`), and the
+trainer stays selected so instant restart re-runs the drill.
 
 ## Two-player, and how it is tested
 

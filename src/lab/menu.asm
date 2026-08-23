@@ -104,17 +104,17 @@ LabMenuInput::
 	cp   MODE_TRANSITION
 	ret  nz
 
-; the level the drill starts on, 0-22, shown as 0-9 then A-M
-	ld   a, [wLabDrillLevel]
+; the score the drill starts you on, in hundreds of thousands. 0-9 then A-F.
+	ld   a, [wLabDrillScore]
 	add  b
-	cp   MAX_LEVEL + 1
-	jr   c, .storeLevel
-	and  a                          ; wrapped past 0 or past M
-	ld   a, MAX_LEVEL
-	jr   nz, .storeLevel
+	cp   DRILL_SCORE_MAX + 1
+	jr   c, .storeScore
+	and  a                          ; wrapped past 0 or past F
+	ld   a, DRILL_SCORE_MAX
+	jr   nz, .storeScore
 	xor  a
-.storeLevel:
-	ld   [wLabDrillLevel], a
+.storeScore:
+	ld   [wLabDrillScore], a
 	jp   LabMenuSound
 
 .adjustMusic:
@@ -195,9 +195,8 @@ LabMenuInput::
 	jp   LabMenuSound
 
 
-; Start on a mode. TETRIS and B-TYPE hand over to that type's level select, the
-; way the original screen did. TRANSITION carries its own level, so it goes
-; straight into the game - a drill you set up once and repeat.
+; Start on a mode. Each hands over to its type's level select, the way the
+; original screen did - the level comes from there and nowhere else.
 LabMenuLaunch::
 	ld   a, [wLabMode]
 	cp   MODE_2PLAYER
@@ -236,12 +235,12 @@ LabMenuLaunch::
 	ldh  [hGameState], a
 	ret
 
+; TRANSITION starts like TETRIS does: the level comes from the level select and
+; nowhere else. The row's value is the trainer's own parameter.
 .transition:
 	ld   a, GAME_TYPE_A_TYPE
 	ldh  [hGameType], a
-	ld   a, [wLabDrillLevel]
-	ldh  [hATypeLevel], a
-	ld   a, GS_IN_GAME_INIT
+	ld   a, GS_A_TYPE_SELECTION_INIT
 	ldh  [hGameState], a
 	ret
 
@@ -382,10 +381,10 @@ LabMenuSeedCell::
 	ret
 
 
-; 0-9 then A-M: the font puts those tiles at $00-$16, so the tile is the level.
+; 0-9 then A-F: the font puts those tiles at $00-$0F, so the tile is the value.
 LabMenuPaintLevel::
 	call LabMenuValueCell
-	ld   a, [wLabDrillLevel]
+	ld   a, [wLabDrillScore]
 	jp   LabPutTile
 
 

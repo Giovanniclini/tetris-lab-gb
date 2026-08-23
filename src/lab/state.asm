@@ -102,7 +102,8 @@ wLabSeedLo::  db
 ; so trainers can ask which drill is running.
 wLabMode::        db        ; MODE_TETRIS / MODE_BTYPE / MODE_TRANSITION
 wLabDrillPending:: db       ; set at game init, consumed on the first game frame
-wLabDrillLevel::  db        ; the level the TRANSITION row is set to
+wLabDrillScore::  db        ; TRANSITION's starting score, in hundreds of
+                           ; thousands: 0-9 then A-F, so F is 1 500 000.
 wLabSeedDigit::   db        ; 0-5 while editing the seed row, else SEED_IDLE
 
 ; The controller as the player actually held it, before LabSuppressPushdown
@@ -133,3 +134,9 @@ wLabHiScoreMillions:: ds (MAX_LEVEL + 1) * 3
 
 	ds 934
 wLabStateEnd::
+
+; The TRANSITION row's top value, shown as F. TetrisGYM has one more, G, which
+; turns its trainer off for Game Genie SXTOKL compatibility - a code that
+; changes the NES's first-transition formula. The Game Boy has no such formula,
+; so there is nothing here for it to mean.
+DEF DRILL_SCORE_MAX EQU $0f

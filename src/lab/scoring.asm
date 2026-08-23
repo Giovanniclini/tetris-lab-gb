@@ -51,8 +51,20 @@ LabDrawScoreCarry::
 ; - so a change shows six digits for one frame before the seven appear.
 .carried:
 	ld   [wLabScoreCarryDrawn], a
+	jr   LabDrawWholeScore
+
+
+; All seven digits, zeros and all. The original only redraws the score when
+; drop points land and the piece has finished falling ($01DB), so anything that
+; sets the score outside that - a trainer presetting it - has to draw its own.
+LabDrawWholeScore::
+	ld   a, [wLabScoreMillions]
 	ld   hl, SCORE_CELL_FIRST
 	and  $0f
+	jr   nz, .seventh
+	ld   a, TILE_EMPTY              ; under a million there is no seventh digit
+
+.seventh:
 	call LabPutBothMaps
 	inc  hl
 

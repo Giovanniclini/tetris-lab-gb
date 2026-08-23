@@ -76,6 +76,57 @@ jobs:
           fi
           echo "ok: no ROM data tracked"
 
+  # Two patch channels, each a pre-release with a fixed download URL:
+  #
+  #   nightly   every push to main
+  #   preview   every pull request, so a build can be tried before it is merged
+  #
+  # Both gated on `needs: test`. A build that fails its own suite must not
+  # become the thing a phone picks up.
+  #
+  # preview publishes from pull_request runs, which for a same-repo branch have
+  # a writable token. Fork pull requests do not, and are skipped rather than
+  # failing - a fork must not be able to publish to this repo's releases anyway.
+  publish:
+    name: publish patch
+    needs: test
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache the RGBDS toolchain
+        uses: actions/cache@v4
+        with:
+          path: build/toolchain
+          key: rgbds-${{ runner.os }}-${{ hashFiles('tools/rgbds.py') }}
+
+      - name: Publish the patch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_LABEL: >-
+            ${{ github.event_name == 'pull_request'
+                && format('#{0} {1}', github.event.pull_request.number, github.event.pull_request.title)
+                || github.ref_name }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            tools/nightly.sh nightly
+          else
+            tools/nightly.sh preview
+          fi
+
   macos:
     name: macOS build (weekly)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

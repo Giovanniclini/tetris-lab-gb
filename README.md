@@ -69,6 +69,14 @@ python3 tools/patch.py tetrislab.bps "Tetris (World) (Rev A).gb"
 That writes `tetrislab.gb`. Any BPS patcher works too (Floating IPS, beat, Rom Patcher JS);
 the script is here so you need nothing but Python 3.
 
+To follow development rather than the releases, two patches are republished from CI once their
+tests pass, at URLs that never change:
+[`nightly`](https://github.com/Giovanniclini/tetris-lab-gb/releases/download/nightly/tetrislab.bps)
+is whatever `main` is now, and
+[`preview`](https://github.com/Giovanniclini/tetris-lab-gb/releases/download/preview/tetrislab.bps)
+is whatever is up for review. Unstable by definition — but a bookmark, or a phone, always fetches
+the current build.
+
 Or build it from source — no ROM required, since the ROM is rebuilt from the disassembly:
 
 ```

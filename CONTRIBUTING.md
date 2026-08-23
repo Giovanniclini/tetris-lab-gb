@@ -87,6 +87,34 @@ python3 -m venv .venv
 .venv/bin/python tests/test_lfsr_vectors.py
 ```
 
+### Patch channels
+
+Two pre-releases, each republished by CI once the test job passes. Their
+download URLs never change, so a bookmark — or a phone — always fetches the
+current build of that channel:
+
+| channel | is | published on |
+| --- | --- | --- |
+| [`nightly`](https://github.com/Giovanniclini/tetris-lab-gb/releases/download/nightly/tetrislab.bps) | whatever `main` is now | every push to `main` |
+| [`preview`](https://github.com/Giovanniclini/tetris-lab-gb/releases/download/preview/tetrislab.bps) | whatever is up for review | every pull request |
+
+`preview` is the one that matters day to day: a build you can only try *after*
+merging is a build you cannot use to decide whether to merge. Its release notes
+name the pull request it came from.
+
+Both exist so a build can be tried on a phone without being at the machine that
+built it — apply the patch to your own ROM with a browser BPS patcher, then load
+the result into an emulator. No ROM data is published: the patch is 2 KB and
+your ROM stays on your device.
+
+`tools/nightly.sh [channel]` does either by hand, for a branch with no pull
+request open yet. Both are pre-releases, so tagged releases keep the "Latest"
+badge, and both carry the **patch only** — never attach a `.gb`, see
+`CLAUDE.md` §10.
+
+Fork pull requests are skipped: their token cannot write releases, and a fork
+should not be able to publish to this repository anyway.
+
 The README's screenshots come from the ROM, not from a folder of stale
 captures. Regenerate them after a UI change:
 

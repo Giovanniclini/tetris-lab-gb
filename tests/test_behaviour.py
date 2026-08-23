@@ -22,7 +22,7 @@ GRAVITY = [53, 49, 45, 41, 37, 33, 28, 22, 17, 11,
 
 
 ROCKETS = {0x58: "big", 0x59: "medium", 0x5A: "small"}
-GS_GAME_OVER_CLEARING, GS_PRE_ROCKET_WAIT = 0x0D, 0x34
+GS_GAME_OVER_CLEARING, GS_PRE_ROCKET_WAIT, GS_LEVEL_ENDED_MAIN = 0x0D, 0x34, 0x04
 hATypeRocketSpecIdx = 0xFFF3
 
 
@@ -42,10 +42,10 @@ def rocket_for(score):
         for _ in range(400):
             t.tick(1)
             if t.state == GS_PRE_ROCKET_WAIT:
-                return ROCKETS.get(t[hATypeRocketSpecIdx])
-            if t.state == 0x04:                  # the plain game over screen
-                return None
-    return None
+                return ROCKETS.get(t[hATypeRocketSpecIdx], "unknown rocket")
+            if t.state == GS_LEVEL_ENDED_MAIN:
+                return None                      # the plain game over screen
+    return "never got anywhere"                  # so a hang cannot read as a pass
 
 
 def test_gravity_matches_table_for_every_level():
@@ -247,25 +247,14 @@ def test_the_score_passes_999999():
         assert t[0x9800 + 3 * 32 + 12] == 0x7B, "the score box border was overwritten"
 
 
-def test_the_rocket_still_fires_at_the_original_thresholds():
-    """The original picks a rocket from the top of the three score bytes: $20,
-    $15 and $10 - 200 000, 150 000, 100 000 ($1F58). None of those move."""
-    for score, want in (
-        (99999, None), (100000, "small"), (149999, "small"),
-        (150000, "medium"), (199999, "medium"), (200000, "big"),
-        (999999, "big"),
-    ):
-        assert rocket_for(score) == want, (
-            f"{score} got {rocket_for(score)}, expected {want}"
-        )
-
-
-def test_a_million_gets_the_big_rocket():
-    """Past a million the three bytes have wrapped to 00 00 00, so the biggest
-    score in the game got no rocket at all while 999 999 got the big one."""
-    for score in (1000000, 1000257, 9999999):
-        assert rocket_for(score) == "big", (
-            f"{score} got {rocket_for(score)}, expected the big rocket"
+def test_the_rocket_scene_never_plays():
+    """The original spends 2.4 seconds waiting and then twenty-odd more on a
+    rocket, at exactly the scores a good session produces. A trainer wants the
+    drill back. Checked at every threshold the original recognises, and past a
+    million, where the score bytes have wrapped."""
+    for score in (99999, 100000, 150000, 200000, 999999, 1000000, 9999999):
+        assert rocket_for(score) is None, (
+            f"{score} still reached the rocket scene"
         )
 
 

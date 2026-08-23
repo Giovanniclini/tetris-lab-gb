@@ -207,11 +207,12 @@ the original compares three bytes, so 1 000 050 stored as 000050 would have lost
 to 999 999. Only the comparison is ours — the shift, the name and the display
 stay the original's. No new hooks.
 
-**Status 2026-08-22:** the rocket fires past a million. The original picks one
-from the top of the three score bytes, which have wrapped by then, so the
-biggest score in the game earned no rocket while 999 999 earned the big one.
-Its own thresholds are untouched. No new hooks — state `$04` is only reached
-when the original decided against a rocket, and we already own it.
+**Status 2026-08-22:** the rocket scene is skipped whole — the 2.4-second wait
+and the twenty-odd seconds after it, at exactly the scores a good session
+produces. Every score now reaches the game over screen in two frames, by the
+path the original already uses for scores under 100 000. This replaces the
+fix a day earlier that made the rocket fire past a million: correct, and dead
+the moment the scene stopped playing.
 
 **Status 2026-08-22:** pushdown no longer applies at L and M, where it made the
 piece slower rather than faster. Reported by Tolstoj; the drop points go with

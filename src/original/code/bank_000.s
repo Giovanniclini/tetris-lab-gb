@@ -778,7 +778,13 @@ ENDC
 	dw GameState31_RocketSceneLiftOff
 	dw GameState32_RocketSceneShootFire
 	dw GameState33_RocketSceneEnd
+; --- deviation #21: skip the rocket scene ---
+IF LAB
+	dw LabStateHook
+ELSE
 	dw GameState34_PreRocketSceneWait
+ENDC
+; --- end deviation #21 ---
 	dw GameState35_CopyrightCanContinue
 	dw Stub_27ea
 	

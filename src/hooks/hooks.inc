@@ -93,6 +93,13 @@
 ;                                            reaches, sent back to the menu so
 ;                                            the A-TYPE/B-TYPE screen the menu
 ;                                            replaced is never drawn.
+;   HOOK_STATE_TABLE34 $0363-$0364       2  Jump-table entry for $34, the wait
+;                                            before the rocket scene. Sent to
+;                                            the plain game over screen, which
+;                                            is where the original sends every
+;                                            score that earns no celebration.
+;                                            Skips the scene and the 2.4 s wait
+;                                            in front of it.
 ;   HOOK_SCORE_CELLS  $01E8, $01F2,       4  The score is drawn one cell right,
 ;                     $23AD, $23C6           so its units digit lands in the
 ;                                            spare column 19 instead of leaving

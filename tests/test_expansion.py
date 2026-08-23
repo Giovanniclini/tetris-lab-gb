@@ -27,6 +27,7 @@ ALLOWED_RANGES = [
     (0x0307, 0x030C, "HOOK_STATE_TABLE_06/07/08 - the title screen is the Lab menu, "
                      "drawn by $06 so the original never appears; B from a level "
                      "select comes back to it"),
+    (0x0363, 0x0364, "HOOK_STATE_TABLE34 - the rocket scene, skipped whole"),
     (0x01E8, 0x01E8, "HOOK_SCORE_CELLS - score drawn one cell right, screen 0"),
     (0x01F2, 0x01F2, "HOOK_SCORE_CELLS - score drawn one cell right, screen 1"),
     (0x23AD, 0x23AD, "HOOK_SCORE_CELLS - score drawn one cell right, screen 1"),

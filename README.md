@@ -124,6 +124,10 @@ High score entries carry the seventh digit too, in the dotted gap the original l
 name and the score, and they are ranked by it — otherwise a 1 000 050 stored as its low six digits
 would lose to a 999 999.
 
+The rocket scene never plays. The original spends 2.4 seconds waiting and twenty-odd more on a
+launch, at exactly the scores a good session produces; topping out now returns you to the game over
+screen in two frames, by the same path the original already uses for scores under 100,000.
+
 Holding `Down` does nothing at `L` and `M`. Pushdown moves a piece every 3 frames whatever the
 level, and those two fall in 2 and 1 — so it would make them *slower*. No push, so no drop points
 there either.

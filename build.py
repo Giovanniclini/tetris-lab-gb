@@ -17,11 +17,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from tools import gfx, patch, rgbds  # noqa: E402
+from tools import gfx, patch, rgbds, trep  # noqa: E402
 
 ROOT = Path(__file__).parent.resolve()
 SRC = ROOT / "src" / "original"
 BUILD = ROOT / "build"
+TREP_SOURCE = ROOT / "tetrislab.trep-source.json"
 OBJ = BUILD / "obj"
 
 # Tetris (World) (Rev A), a.k.a. v1.1 - the community standard.
@@ -139,6 +140,12 @@ def build_rom(lab: int, no_sram: bool = False):
              "-m", hex(mbc), "-r", hex(ram), rom])
     else:
         run([tc / "rgbfix", "-v", "-p", "255", rom])
+
+    if lab and TREP_SOURCE.exists():
+        # A map of ourselves, for Tolstoj's ROM editor. Nothing here runs TREP;
+        # it reads this alongside the ROM. See docs/decisions/0012.
+        n = trep.generate(TREP_SOURCE, sym, mapf, BUILD / f"{name}.trep.json")
+        print(f"trep: {n} background maps -> build/{name}.trep.json")
 
     data = rom.read_bytes()
     print(f"\n{rom.relative_to(ROOT)}  {len(data)} bytes ({len(data) // 1024}KB)")

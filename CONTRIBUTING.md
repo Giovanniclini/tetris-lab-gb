@@ -85,7 +85,25 @@ python3 -m venv .venv
 .venv/bin/python tests/test_hiscore.py
 .venv/bin/python tests/test_pieces.py
 .venv/bin/python tests/test_lfsr_vectors.py
+.venv/bin/python tests/test_trep.py
 ```
+
+### Editing the graphics
+
+`python3 build.py` writes `build/tetrislab.trep.json` beside the ROM, the `.sym`
+and the `.map`. Those four files are what [TREP](https://tolstoj-82.github.io/apps/trep/)
+— Tolstoj's ROM editor — opens to show the tilesets and background maps as
+editable pictures. Nothing in the build runs TREP; it reads what the build
+publishes.
+
+What TREP is for here: **designing**. Screens the Lab owns are drawn at runtime
+rather than stored as layouts, so a design arrives as drawing code, not as a
+`.bin`. See `docs/decisions/0012` for why — the short version is that layout
+data is shared with the `LAB=0` build, and bank 0 has no room for a second copy.
+
+`tetrislab.trep-source.json` is the catalogue. Its dimensions are load-bearing:
+layouts carry no `.end` label, so a wrong figure shows a plausible wrong screen
+with no error. `tests/test_trep.py` checks every one against the data on disk.
 
 ### Patch channels
 

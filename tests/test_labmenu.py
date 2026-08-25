@@ -17,7 +17,7 @@ from tools.emu import (Tetris, sym, hATypeLevel,  # noqa: E402
 
 ROM = "build/tetrislab.gb"
 
-GS_GAME_TYPE_MAIN = 0x07      # the menu lives on the title screen's state
+GS_GAME_TYPE_MAIN = 0x0e      # the menu lives on the game type screen's states
 GS_A_TYPE_SELECTION_MAIN = 0x11
 GS_B_TYPE_SELECTION_MAIN = 0x13
 
@@ -29,10 +29,11 @@ LINES_LO, LINES_HI = hNumLinesCompletedBCD, hNumLinesCompletedBCD + 1
 GAME_TYPE_A, GAME_TYPE_B = 0x37, 0x77
 MUSIC_A, MUSIC_OFF = 0x1C, 0x1F
 
-MODE_TETRIS, MODE_BTYPE, MODE_2PLAYER = 0, 1, 2
-MODE_TRANSITION, MODE_SEED, MODE_MUSIC = 3, 4, 5
+MODE_TETRIS, MODE_BTYPE, MODE_TRANSITION = 0, 1, 2
+MODE_SEED, MODE_MUSIC = 3, 4
 
 wLabMode = sym("wLabMode")
+hIs2Player = 0xFFC5
 
 TILE_BLANK = 0x2F
 
@@ -132,8 +133,7 @@ def test_the_menu_starts_its_music():
         songs = []
         # $1521: `ld [wSongToStart], a` inside PlaySongBasedOnMusicTypeChosen
         t.pb.hook_register(0, 0x1521, lambda _: songs.append(t.pb.register_file.A), None)
-        t.run_until_state(GS_GAME_TYPE_MAIN)
-        t.tick(20)
+        t.to_menu()
         assert songs, "the menu asked for no music at all"
 
         songs.clear()
@@ -175,27 +175,117 @@ def test_settings_survive_a_round_trip_through_a_game():
         assert t[sym("wLabSeedHi")] == seed, "the seed was reset"
 
 
-def test_the_original_title_screen_never_appears():
-    """Not on boot, and not on the way back from a level select. $06 draws the
-    menu itself rather than the title, so there is no frame to catch."""
-    def title_frames(t, limit):
-        n = 0
-        for _ in range(limit):
-            t.pb.tick()
-            row = text(t, 9).replace(" ", "")
-            if "PLAYER" in row:
-                n += 1
-        return n
+def test_the_title_screen_offers_both_player_counts():
+    """The screen the menu used to stand on, with Tolstoj's artwork on it."""
+    with Tetris(ROM) as t:
+        t.to_title()
+        t.tick(20)
+        rows = "\n".join(text(t, r) for r in range(18))
+        assert rows.count("PLAYER") == 2, f"not the title screen:\n{rows}"
+        assert t[0x9800 + 15 * 32] == 0x9C, "no cursor beside 1 PLAYER"
+
+
+def test_screens_downstream_of_the_title_get_the_menu_tileset():
+    """The title screen lays its own tiles over VRAM. Everything after it - the
+    menu, the level select, the game - reads Gfx_MenuScreens from $30 up, so
+    each has to reload the tileset on the way in.
+
+    This is the trap ADR 0007 records and it has now been walked into twice: the
+    tilemap is identical either way, so the screen is laid out correctly and
+    drawn in the wrong alphabet. Nothing about the layout catches it; only the
+    tile data does.
+    """
+    rom = (ROOT / "build" / "tetrislab.gb").read_bytes()
+    syms = {}
+    for line in (ROOT / "build" / "tetrislab.sym").read_text().splitlines():
+        parts = line.split()
+        if len(parts) == 2 and ":" in parts[0]:
+            bank, addr = parts[0].split(":")
+            syms.setdefault(parts[1], (int(bank, 16), int(addr, 16)))
+    bank, addr = syms["Gfx_MenuScreens"]
+    off = addr if bank == 0 else bank * 0x4000 + addr - 0x4000
+    want = rom[off:off + 16]
 
     with Tetris(ROM) as t:
-        assert title_frames(t, 160) == 0, "the 1P/2P title flashed during boot"
-        t.run_until_state(GS_GAME_TYPE_MAIN)
-        t.tick(20)
-        t.press("start")
+        t.to_menu()                       # via the title screen, which clobbers $30
+        got = bytes(t[0x8000 + 0x30 * 16 + i] for i in range(16))
+        assert got == want, "the menu is showing the title screen's tiles"
+
+        t.press("start")                  # TETRIS -> the level select
         t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
         t.tick(20)
-        t.press("b")
-        assert title_frames(t, 90) == 0, "a screen flashed on the way back"
+        got = bytes(t[0x8000 + 0x30 * 16 + i] for i in range(16))
+        assert got == want, "the level select is showing the title screen's tiles"
+
+
+def test_the_title_screen_shows_the_version_the_rom_carries():
+    """The version is drawn over the artwork rather than stored in it, so a
+    release bumps LAB_VERSION and nothing else - no new layout from the artist.
+
+    The artwork leaves five cells after "VERSION" and spends two on the gap, so
+    the constant has to be three characters. This asserts the two agree by
+    reading them out of the ROM's own string and off the screen.
+    """
+    rom = (ROOT / "build" / "tetrislab.gb").read_bytes()
+    syms = {}
+    for line in (ROOT / "build" / "tetrislab.sym").read_text().splitlines():
+        parts = line.split()
+        if len(parts) == 2 and ":" in parts[0]:
+            bank, addr = parts[0].split(":")
+            syms.setdefault(parts[1], (int(bank, 16), int(addr, 16)))
+    bank, addr = syms["LabVersion"]
+    off = addr if bank == 0 else bank * 0x4000 + addr - 0x4000
+    text_ = rom[off:off + 40].split(b"\x00")[0].decode()
+    version = text_.split()[-1]
+    assert len(version) == 3, f"{version!r} is not three characters; the field is three cells"
+
+    # 0-9 are tiles $00-$09 and "." is $24, so the cells are the string itself
+    tile = {".": 0x24, **{str(d): d for d in range(10)}}
+    want = [tile[c] for c in version]
+    with Tetris(ROM) as t:
+        t.to_title()
+        t.tick(20)
+        got = [t[0x9800 + 11 * 32 + 13 + i] for i in range(3)]
+        assert got == want, (
+            f"the screen shows {got}, the ROM says {version} = {want}"
+        )
+
+
+def test_the_menu_borrows_the_originals_arrow_for_its_cursor():
+    """The menu's tileset has no arrow in it - the one the original marks a
+    selection with lives in the title-screen tileset - so the menu copies that
+    single tile into $FF. Read out of VRAM, because the tilemap only says which
+    tile index is drawn, not what is in it.
+
+    The title screen needs none of this: Tolstoj drew an arrow into the artwork,
+    and selecting a side moves that tile.
+    """
+    want = (ROOT / "build" / "obj" / "build" / "titleScreen.2bpp").read_bytes()
+    want = want[(0x58 - 0x27) * 16:][:16]
+
+    with Tetris(ROM) as t:
+        t.to_menu()
+        got = bytes(t[0x8000 + 0xFF * 16 + i] for i in range(16))
+        assert got == want, "the menu has no arrow tile"
+        assert t[0x9800 + 6 * 32 + 3] == 0xFF, "the menu cursor is not the arrow"
+
+
+def test_the_title_screen_has_exactly_one_cursor():
+    """The artwork carries an arrow beside 1 PLAYER, so a sprite on top of it is
+    a second cursor - both drawn, only one of them moving. Selecting a side
+    moves the artwork's own tile and nothing else."""
+    with Tetris(ROM) as t:
+        t.to_title()
+        t.tick(20)
+        one, two = 0x9800 + 15 * 32, 0x9800 + 15 * 32 + 10
+        assert (t[one], t[two]) == (0x9C, 0x32), "1 PLAYER should start selected"
+        assert not any(t[0xC000 + i * 4] for i in range(40)), (
+            "a sprite is drawn over the artwork's own cursor"
+        )
+        t.press("right")
+        assert (t[one], t[two]) == (0x32, 0x9C), "the arrow did not move to 2 PLAYER"
+        t.press("left")
+        assert (t[one], t[two]) == (0x9C, 0x32), "the arrow did not move back"
 
 
 def test_gameplay_survives_the_replaced_title_init():
@@ -227,8 +317,7 @@ def test_the_level_select_renders_like_the_stock_rom():
 
 
 def test_b_from_the_level_select_returns_to_the_menu():
-    """B goes to $08, which would draw the A-TYPE/B-TYPE screen the menu
-    replaced."""
+    """B goes to $08, which paints the menu - the screen it came from."""
     with Tetris(ROM) as t:
         t.to_level_select()
         t.press("b")
@@ -241,10 +330,11 @@ def test_the_menu_replaces_the_game_type_screen():
         to_menu(t)
         rows = [text(t, r) for r in range(18)]
         joined = "\n".join(rows)
-        for want in ("TETRIS LAB", "TETRIS", "B-TYPE", "2 PLAYER",
+        for want in ("TETRIS LAB", "TETRIS", "B-TYPE",
                      "TRANSITION", "SEED", "MUSIC"):
             assert want in joined, f"{want!r} missing from the menu:\n{joined}"
-        assert "1PLAYER" not in joined, "the original title screen is still showing"
+        assert "PLAYER" not in joined, (
+            "2 PLAYER belongs on the title screen, not the menu")
 
 
 def test_the_cursor_moves_and_wraps():

@@ -82,10 +82,13 @@ LabRandom::
 
 SECTION "Lab Bank 1 Gfx Thunk", ROMX[$7FF6], BANK[1]
 
-LabLoadMenuGfx::
+; The tileset every screen downstream of here expects: the menu, the level
+; select and the game all read tiles from it. The title screen calls this too
+; and then lays its own tiles over the top, which is why there is one thunk and
+; not two - bank 1 has no room for a second.
+LabLoadGfx::
 	call TurnOffLCD
-	call LoadAsciiAndMenuScreenGfx
-	ret
+	jp   LoadAsciiAndMenuScreenGfx
 
 
 SECTION "Lab Bank 1 Thunk", ROMX[$6430], BANK[1]

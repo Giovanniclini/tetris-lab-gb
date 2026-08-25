@@ -25,11 +25,18 @@ from tools.emu import (Tetris, hATypeLevel, GS_IN_GAME_MAIN,  # noqa: E402
 OUT = ROOT / "assets" / "screens"
 SCALE = 3
 
-# The DMG palette PyBoy renders in monochrome; map its two levels onto the
-# familiar green so the shots look like a Game Boy rather than a fax.
-GREEN = {0x00: (0x0F, 0x38, 0x0F), 0xFF: (0x9B, 0xBC, 0x0F)}
+# The DMG palette PyBoy renders in monochrome; map all four levels onto the
+# familiar green so the shots look like a Game Boy rather than a fax. Four, not
+# two: the title artwork uses every shade, and a lookup that knew only black and
+# white rendered both mid-greys as black.
+GREEN = {
+    0xFF: (0x9B, 0xBC, 0x0F),
+    0x99: (0x8B, 0xAC, 0x0F),
+    0x55: (0x30, 0x62, 0x30),
+    0x00: (0x0F, 0x38, 0x0F),
+}
 
-MODE_TETRIS, MODE_BTYPE, MODE_2PLAYER, MODE_TRANSITION, MODE_SEED, MODE_MUSIC = range(6)
+MODE_TETRIS, MODE_BTYPE, MODE_TRANSITION, MODE_SEED, MODE_MUSIC = range(5)
 
 PICKER_CELL = 0x9800 + 6 * 32 + 16
 TILE_BLANK = 0x2F
@@ -79,6 +86,10 @@ def main():
     print("screenshots:")
 
     with Tetris("build/tetrislab.gb") as t:
+        t.to_title()
+        t.tick(20)
+        shoot(t, "title")
+
         t.to_menu()
         shoot(t, "menu")
 

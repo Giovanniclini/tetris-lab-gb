@@ -40,22 +40,21 @@ hSerialInterruptHandled = 0xFFCC
 MP_ROLE_PASSIVE, MP_ROLE_MASTER = 0x55, 0x29
 SC_PING = 0x80                       # SC_REQUEST_TRANSFER | SC_PASSIVE
 
-MODE_2PLAYER = 2
-
-wLabMode = sym("wLabMode")
+hIs2Player = 0xFFC5
 
 
-def to_menu(t):
+def to_title(t):
     t.run_until_state(GS_TITLE_SCREEN_MAIN)
     t.tick(20)
     return t
 
 
-def to_row(t, row):
-    to_menu(t)
-    for _ in range(row):
-        t.press("down")
-    assert t[wLabMode] == row, f"wanted row {row}, cursor is on {t[wLabMode]}"
+def to_two_player(t):
+    """2 PLAYER is chosen on the title screen: it is the only state the
+    original's serial code assigns a role in."""
+    to_title(t)
+    t.press("right")
+    assert t[hIs2Player] == 1, f"cursor is on side {t[hIs2Player]}, not 2 PLAYER"
     return t
 
 
@@ -96,7 +95,7 @@ def test_the_menu_pings_every_frame():
     """A second Game Boy finds us by seeing this. The stock title screen sends
     it every frame; so must whatever replaces that screen."""
     with Tetris(ROM) as t:
-        to_menu(t)
+        to_title(t)
         for _ in range(60):
             t.pb.tick()
             assert t[rSC] == SC_PING, f"stopped pinging: SC is ${t[rSC]:02X}"
@@ -117,19 +116,19 @@ def test_a_partner_joining_starts_two_player_without_a_keypress():
     a role, and the menu has to notice and hand over. Simulated by writing the
     HRAM the real interrupt handler writes."""
     with Tetris(ROM) as t:
-        to_menu(t)
+        to_title(t)
         t.pb.memory[hMultiplayerPlayerRole] = MP_ROLE_PASSIVE
         t.pb.memory[hSerialInterruptHandled] = 1
         for _ in range(10):
             t.pb.tick()
             if t.state in (GS_2PLAYER_MUSIC_INIT, GS_2PLAYER_MUSIC_MAIN):
                 return
-        raise AssertionError(f"stayed on the menu (state ${t.state:02X})")
+        raise AssertionError(f"stayed on the title screen (state ${t.state:02X})")
 
 
 def test_two_player_with_a_partner_already_found_starts():
     with Tetris(ROM) as t:
-        to_row(t, MODE_2PLAYER)
+        to_two_player(t)
         t.pb.memory[hMultiplayerPlayerRole] = MP_ROLE_MASTER
         t.press("start")
         t.tick(10)
@@ -142,14 +141,14 @@ def test_two_player_with_no_cable_stays_on_the_menu():
     """The transfer still completes with nothing attached - the byte comes back
     as $FF - so the wait cannot hang, and no role is assigned."""
     with Tetris(ROM) as t:
-        to_row(t, MODE_2PLAYER)
+        to_two_player(t)
         t.pb.memory[hMultiplayerPlayerRole] = 0
         t.press("start")
         t.tick(60)
         assert t.state == GS_TITLE_SCREEN_MAIN, (
             f"went somewhere without a partner (state ${t.state:02X})"
         )
-        assert t[wLabMode] == MODE_2PLAYER, "the cursor moved on its own"
+        assert t[hIs2Player] == 1, "the cursor moved on its own"
 
 
 TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]

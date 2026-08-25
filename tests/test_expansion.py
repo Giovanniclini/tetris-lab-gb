@@ -39,6 +39,7 @@ ALLOWED_RANGES = [
     (0x031B, 0x031E, "HOOK_STATE_TABLE - A-type selection states routed via the Lab"),
     (0x0325, 0x0326, "HOOK_STATE_TABLE_15 - name entry routed via the Lab"),
     (0x0343, 0x0344, "HOOK_STATE_TABLE_24 - copyright screen skipped entirely"),
+    (0x0317, 0x0318, "HOOK_STATE_TABLE_0E - the game type screen's main state, the Lab menu"),
     (0x1B6F, 0x1B71, "HOOK_RNG_BTYPE - B-type garbage draw routed via LabRandom"),
     (0x1C14, 0x1C15, "HOOK_INGAME_RST - in-game reset check routed via the Lab"),
     (0x2043, 0x2045, "HOOK_RNG_PIECE - piece generator draw routed via LabRandom"),

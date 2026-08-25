@@ -17,7 +17,7 @@
 SECTION "Lab Core", ROMX[$4000], BANK[2]
 
 LabVersion::
-	db "TETRISLABGB 0.3", 0
+	db "TETRISLABGB ", LAB_VERSION, 0
 
 ; Entry point for the Lab, reached via FarCall with b = BANK(LabInit).
 ; Does nothing yet: Milestone 0.5 expands the cartridge, it does not add
@@ -51,11 +51,13 @@ LabDispatch::
 	cp   GS_A_TYPE_SELECTION_INIT
 	jr   z, .init
 	cp   GS_TITLE_SCREEN_MAIN
-	jp   z, .menu
+	jp   z, .titleMain
 	cp   GS_TITLE_SCREEN_INIT
-	jp   z, .menuInit
+	jp   z, .titleInit
 	cp   GS_GAME_MUSIC_TYPE_INIT
-	jp   z, .backToMenu
+	jp   z, .menuInit
+	cp   GS_GAME_TYPE_MAIN
+	jp   z, .menu
 	cp   GS_IN_GAME_MAIN
 	jp   z, .inGameMain
 	cp   GS_COPYRIGHT_DISPLAY
@@ -142,14 +144,14 @@ LabDispatch::
 	ld   hl, Stub_148c
 	ret
 
-; The title screen's init, replaced so the original title is never drawn. The
-; clears are the original's ($03AE), transcribed; only the screen is ours.
+; The title screen's init. The clears are the original's ($03AE), transcribed;
+; the artwork and the cursor are ours.
 ;
 ; The screen buffer clear is not cosmetic. InGameCheckIfAnyTetrisRowsComplete
 ; ($213E) scans wGameScreenBuffer for TILE_EMPTY to decide which rows are full -
 ; leave it holding anything else and every row reads as complete the moment the
 ; first piece lands, which overruns a four-entry list and hangs the game.
-.menuInit:
+.titleInit:
 	xor  a
 	ldh  [hIsRecordingDemo], a
 	ldh  [hPieceFallingState], a
@@ -186,36 +188,44 @@ LabDispatch::
 	dec  b
 	jr   nz, .displayBlackRow
 
-; serial back on: the menu is where a link partner finds us
+; serial back on: the title screen is where a link partner finds us
 	ld   a, IEF_VBLANK | IEF_SERIAL
 	ldh  [rIE], a
 
-	ld   a, SEED_IDLE
-	ld   [wLabSeedDigit], a
-	call LabMenuDraw
+	call LabTitleDraw
 
 ; Start the music the MUSIC row is set to. The screens this menu replaced each
 ; did their own: the title screen played MUS_TITLE_SCREEN, the A/B screen played
 ; the chosen type ($1481). The chosen type is right here - you audition it on
 ; the row - so that is the one to play. Without this the menu is silent until
 ; you nudge the row, which is what gave it away.
-	call PlaySongBasedOnMusicTypeChosen
+	ld   a, MUS_TITLE_SCREEN
+	ld   [wSongToStart], a
 	ld   a, GS_TITLE_SCREEN_MAIN
 	ldh  [hGameState], a
 	ld   hl, Stub_148c
 	ret
 
-; B on a level select goes to $08, which would load the A-TYPE/B-TYPE screen.
-; Send it back to the Lab menu instead - that is where it came from.
-.backToMenu:
-	ld   a, GS_TITLE_SCREEN_INIT
+.titleMain:
+	call LabTitleMain
+	ld   hl, Stub_148c
+	ret
+
+; The Lab menu, on the game type screen's own states - $08 paints it and $0E
+; runs it, the pair the original used for A-TYPE/B-TYPE. B on a level select
+; comes back to $08, which is where it came from.
+.menuInit:
+	ld   a, SEED_IDLE
+	ld   [wLabSeedDigit], a
+	call LabMenuDraw
+
+; The song the MUSIC row is set to: this is the screen you audition it on.
+	call PlaySongBasedOnMusicTypeChosen
+	ld   a, GS_GAME_TYPE_MAIN
 	ldh  [hGameState], a
 	ld   hl, Stub_148c
 	ret
 
-; The Lab menu, on the title screen. The original handler never runs - this is a
-; replacement, not an extension - so the Lab has to keep pinging for a link
-; partner in its place.
 .menu:
 	call LabMenu
 	ld   hl, Stub_148c

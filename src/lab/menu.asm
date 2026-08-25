@@ -1,55 +1,17 @@
 ; --------------------------------------------------------------------------
 ; The Lab menu
 ;
-; The title screen, replaced. One scrolling-list-shaped menu of modes and
-; settings, modelled on TetrisGYM's game type menu (ADR 0007). Also the link
-; handshake, because 2 PLAYER is a row on it.
+; The game type screen, replaced. One scrolling-list-shaped menu of modes and
+; settings, modelled on TetrisGYM's game type menu (ADR 0007). The link
+; handshake is not here: 2 PLAYER is chosen on the title screen, which is the
+; only state the original's serial code will assign a role in.
 ; --------------------------------------------------------------------------
 
 ; The menu screen is painted by the init state and nowhere else, the way every
-; original screen works. $07 is only ever reached through $06 - including when
-; SerialFunc0_titleScreen bounces a stray serial byte back there - so there is
-; no first-entry case to handle.
+; original screen works.
 LabMenu::
-	call LabLinkPing
-	ldh  a, [hGameState]
-	cp   GS_TITLE_SCREEN_MAIN
-	ret  nz                         ; a partner took over; stop touching the menu
-
 	call LabMenuInput
 	jp   LabMenuRepaint
-
-
-; The title screen's own rendezvous, transcribed from GameState07_TitleScreenMain
-; ($0488). A second Game Boy finds us by seeing this ping, so the menu has to
-; keep sending it - and it has to do so from state $07, because
-; SerialFunc0_titleScreen only assigns roles while hGameState says $07.
-LabLinkPing::
-	call SerialTransferWaitFunc
-	ld   a, SB_PASSIVES_PING_IN_TITLE_SCREEN
-	ldh  [rSB], a
-	ld   a, SC_REQUEST_TRANSFER|SC_PASSIVE
-	ldh  [rSC], a
-
-	ldh  a, [hSerialInterruptHandled]
-	and  a
-	ret  z                          ; nothing arrived
-
-	ldh  a, [hMultiplayerPlayerRole]
-	and  a
-	jp   nz, LabStart2Player        ; assigned a role: the master is waiting
-
-	xor  a                          ; a byte, but no role - not a partner
-	ldh  [hSerialInterruptHandled], a
-	ret
-
-
-LabStart2Player::
-	xor  a
-	ldh  [hTimer1], a
-	ld   a, GS_2PLAYER_GAME_MUSIC_TYPE_INIT
-	ldh  [hGameState], a
-	ret
 
 
 LabMenuInput::
@@ -198,27 +160,12 @@ LabMenuInput::
 ; Start on a mode. Each hands over to its type's level select, the way the
 ; original screen did - the level comes from there and nowhere else.
 LabMenuLaunch::
-	ld   a, [wLabMode]
-	cp   MODE_2PLAYER
-	jr   z, .keepSerial
-; What $08 did on the way into a one-player game ($1444): serial off, and the
-; serial registers and any pending interrupt cleared. Leaving rIF holding a
-; stale serial flag is what froze the first piece.
-	ld   a, IEF_VBLANK
-	ldh  [rIE], a
-	xor  a
-	ldh  [rSB], a
-	ldh  [rSC], a
-	ldh  [rIF], a
-.keepSerial:
 	ld   a, SND_CONFIRM_OR_LETTER_TYPED
 	ld   [wSquareSoundToPlay], a
 
 	ld   a, [wLabMode]
 	cp   MODE_BTYPE
 	jr   z, .bType
-	cp   MODE_2PLAYER
-	jr   z, .twoPlayer
 	cp   MODE_TRANSITION
 	jr   z, .transition
 
@@ -244,32 +191,6 @@ LabMenuLaunch::
 	ldh  [hGameState], a
 	ret
 
-; The master half of the handshake, transcribed from $04BF. If a role is already
-; assigned we are the master and the passive is waiting; otherwise announce
-; ourselves and wait one transfer for an answer. With no cable the transfer
-; still completes - the byte just comes back as $FF - so this cannot hang, and
-; no role is assigned, and we stay on the menu.
-.twoPlayer:
-	ldh  a, [hMultiplayerPlayerRole]
-	cp   MP_ROLE_MASTER
-	jp   z, LabStart2Player
-
-	ld   a, SB_MASTER_PRESSING_START
-	ldh  [rSB], a
-	ld   a, SC_REQUEST_TRANSFER|SC_MASTER
-	ldh  [rSC], a
-
-.waitForAnswer:
-	ldh  a, [hSerialInterruptHandled]
-	and  a
-	jr   z, .waitForAnswer
-
-	ldh  a, [hMultiplayerPlayerRole]
-	and  a
-	ret  z                          ; nobody answered: stay where we are
-	jp   LabStart2Player
-
-
 LabMenuSound::
 	ld   a, SND_MOVING_SELECTION
 	ld   [wSquareSoundToPlay], a
@@ -278,9 +199,10 @@ LabMenuSound::
 
 ; The one-off paint, with the LCD off - the labels never change afterwards.
 LabMenuDraw::
-	ld   b, BANK(LabLoadMenuGfx)
-	ld   hl, LabLoadMenuGfx
+	ld   b, BANK(LabLoadGfx)
+	ld   hl, LabLoadGfx
 	call FarCall                    ; LCD off, then the menu tileset
+	call LabPutCursorTile
 	call Clear_wOam
 
 	ld   de, LabMenuScreen
@@ -456,7 +378,6 @@ LabMenuTitle::
 LabMenuLabels::
 	db "TETRIS", 0
 	db "B-TYPE", 0
-	db "2 PLAYER", 0
 	db "TRANSITION", 0
 	db "SEED", 0
 	db "MUSIC", 0

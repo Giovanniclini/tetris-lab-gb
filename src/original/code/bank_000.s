@@ -712,7 +712,17 @@ ENDC
 	dw GameState0b_ScoreUpdateAfterBTypeLevelDone
 	dw GameState0c_UnusedPreShuttleLiftOff
 	dw GameState0d_GameOverScreenClearing
+; --- tetris-lab-gb deviation #22 (see src/original/UPSTREAM.md) ---
+; The A-TYPE/B-TYPE screen's main state, which the Lab menu now runs on. The
+; menu moved off the title screen so the title screen could come back: the
+; original's serial code assigns a multiplayer role only while hGameState is
+; $07, so 2 PLAYER has to be chosen there.
+IF LAB
+	dw LabStateHook
+ELSE
 	dw GameState0e_GameTypeMain
+ENDC
+; --- end deviation #22 ---
 	dw GameState0f_MusicTypeMain
 ; --- tetris-lab-gb deviation #5 (see src/original/UPSTREAM.md) ---
 ; Both A-type selection states route through the Lab, which runs its own logic

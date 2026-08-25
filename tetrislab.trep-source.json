@@ -1,0 +1,204 @@
+{
+  "format": "trep-source",
+  "version": 1,
+  "project": "Tetris Lab GB",
+  "_comment": "Catalogued by Tolstoj, 2026-08-23. Dimensions are load-bearing: layouts carry no .end label, so TREP reads width*height bytes from the symbol and a wrong figure shows a plausible wrong screen with no error. tests/test_trep.py checks every one against the data on disk.",
+  "tileRegions": [
+    {
+      "name": "ASCII",
+      "symbol": "Gfx_Ascii",
+      "endSymbol": "Gfx_Ascii.end",
+      "bitsPerPixel": 1,
+      "filename": "ascii.png",
+      "width": 13,
+      "show": true
+    },
+    {
+      "name": "Menu Screens",
+      "symbol": "Gfx_MenuScreens",
+      "endSymbol": "Gfx_MenuScreens.end",
+      "bitsPerPixel": 2,
+      "filename": "menuScreens.png",
+      "width": 16,
+      "show": true
+    },
+    {
+      "name": "Title Screen",
+      "symbol": "Gfx_TitleScreen",
+      "endSymbol": "Gfx_TitleScreen.end",
+      "bitsPerPixel": 2,
+      "filename": "titleScreen.png",
+      "width": 16,
+      "show": true
+    },
+    {
+      "name": "Title Screen Menu Prefix",
+      "symbol": "Gfx_TitleScreen",
+      "tileCount": 9,
+      "bitsPerPixel": 2,
+      "show": false
+    },
+    {
+      "name": "Rocket Scene",
+      "symbol": "Gfx_RocketScene",
+      "endSymbol": "Gfx_RocketScene.end",
+      "bitsPerPixel": 2,
+      "filename": "rocketScene.png",
+      "width": 16,
+      "show": true
+    }
+  ],
+  "tileSets": [
+    {
+      "name": "Start-Set",
+      "regions": [
+        "ASCII",
+        "Title Screen"
+      ]
+    },
+    {
+      "name": "Game Play-Set",
+      "regions": [
+        "ASCII",
+        "Title Screen Menu Prefix",
+        "Menu Screens"
+      ]
+    },
+    {
+      "name": "Celebration-Set",
+      "regions": [
+        "Rocket Scene"
+      ]
+    }
+  ],
+  "backgroundMaps": [
+    {
+      "name": "Copyright Screen",
+      "symbol": "Layout_Copyright",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Start-Set",
+      "filename": "layout_copyright.bin"
+    },
+    {
+      "name": "Title Screen",
+      "symbol": "Layout_TitleScreen",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Start-Set",
+      "filename": "layout_titleScreen.bin"
+    },
+    {
+      "name": "Music Type",
+      "symbol": "Layout_GameMusicTypeScreen",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Game Play-Set",
+      "filename": "layout_gameMusicTypeScreen.bin"
+    },
+    {
+      "name": "A-Type Select",
+      "symbol": "Layout_ATypeSelectionScreen",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Game Play-Set",
+      "filename": "layout_aTypeSelectionScreen.bin"
+    },
+    {
+      "name": "B-Type Select",
+      "symbol": "Layout_BTypeSelectionScreen",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Game Play-Set",
+      "filename": "layout_bTypeSelectionScreen.bin"
+    },
+    {
+      "name": "Pause",
+      "symbol": "GameInnerScreenLayout_Pause",
+      "width": 8,
+      "height": 10,
+      "tileSet": "Game Play-Set"
+    },
+    {
+      "name": "Score Counter",
+      "symbol": "GameScreenLayout_ScoreTotals",
+      "width": 10,
+      "height": 18,
+      "fileSize": 181,
+      "tileSet": "Game Play-Set",
+      "filename": "gameScreenLayout_scoreTotals.bin"
+    },
+    {
+      "name": "Game Over",
+      "symbol": "GameInnerScreenLayout_GameOver",
+      "width": 8,
+      "height": 7,
+      "tileSet": "Game Play-Set"
+    },
+    {
+      "name": "A-Playfield",
+      "symbol": "Layout_ATypeInGame",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Game Play-Set",
+      "filename": "layout_aTypeInGame.bin"
+    },
+    {
+      "name": "B-Playfield",
+      "symbol": "Layout_BTypeInGame",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Game Play-Set",
+      "filename": "layout_bTypeInGame.bin"
+    },
+    {
+      "name": "Celebration",
+      "symbol": "GameScreenLayout_Dancers",
+      "width": 10,
+      "height": 18,
+      "fileSize": 181,
+      "tileSet": "Game Play-Set",
+      "filename": "gameScreenLayout_dancers.bin"
+    },
+    {
+      "name": "Mario & Luigi",
+      "symbol": "Layout_MarioLuigiScreen",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Game Play-Set",
+      "filename": "layout_marioLuigiScreen.bin"
+    },
+    {
+      "name": "2P Playfield",
+      "symbol": "Layout_2PlayerInGame",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Game Play-Set",
+      "filename": "layout_2PlayerInGame.bin"
+    },
+    {
+      "name": "Platform",
+      "symbol": "Layout_RocketScene",
+      "width": 20,
+      "height": 4,
+      "tileSet": "Celebration-Set",
+      "filename": "layout_rocketScene.bin"
+    },
+    {
+      "name": "Mario Score",
+      "symbol": "Layout_MarioScore",
+      "width": 20,
+      "height": 4,
+      "tileSet": "Celebration-Set",
+      "filename": "layout_marioScore.bin"
+    },
+    {
+      "name": "Luigi Score",
+      "symbol": "Layout_BricksAndLuigiScore",
+      "width": 20,
+      "height": 6,
+      "tileSet": "Celebration-Set",
+      "filename": "layout_bricksAndLuigiScore.bin"
+    }
+  ]
+}

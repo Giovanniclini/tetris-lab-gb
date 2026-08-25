@@ -52,13 +52,31 @@ def squash(pieces):
     return [p for p, _ in itertools.groupby(pieces)]
 
 
+def aligns(rom, model, lead=2, start=6):
+    """Whether what the ROM dealt appears in the model, in order and unbroken.
+
+    Sampling starts mid-game, so both ends are fuzzy: the piece already in
+    flight when the seed is armed was drawn before it and belongs to no seeded
+    sequence, and pieces consumed before the first tick are simply missed. So
+    up to `lead` leading observations are droppable and the run may begin
+    anywhere in the model's first `start` pieces. What is not negotiable is the
+    rest: every remaining piece, in order, with no gaps.
+    """
+    for drop in range(lead + 1):
+        tail = rom[drop:]
+        if len(tail) < 5:
+            break
+        if any(model[o:o + len(tail)] == tail for o in range(start)):
+            return True
+    return False
+
+
 def test_the_model_deals_what_the_rom_deals():
     for seed in SEEDS:
         rom = observed(seed)
         assert len(rom) >= 5, f"${seed:06X}: only {len(rom)} pieces seen"
         model = squash(predicted(seed, 400))
-        # the first sampled piece may be mid-sequence, so allow a small offset
-        assert any(model[o:o + len(rom)] == rom for o in range(3)), (
+        assert aligns(rom, model), (
             f"${seed:06X} diverges\n  rom   {name(rom)}\n  model {name(model[:len(rom)])}"
         )
 

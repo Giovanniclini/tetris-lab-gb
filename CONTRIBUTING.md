@@ -96,10 +96,11 @@ and the `.map`. Those four files are what [TREP](https://tolstoj-82.github.io/ap
 editable pictures. Nothing in the build runs TREP; it reads what the build
 publishes.
 
-What TREP is for here: **designing**. Screens the Lab owns are drawn at runtime
-rather than stored as layouts, so a design arrives as drawing code, not as a
-`.bin`. See `docs/decisions/0012` for why — the short version is that layout
-data is shared with the `LAB=0` build, and bank 0 has no room for a second copy.
+What TREP is for here: **designing**. A Lab screen's static background is a
+20x18 layout in `src/lab/data/`, so a design arrives back as a `.bin`; the
+labels, cursors and values on top of it are drawn at runtime. Original layouts
+in `src/original/data/` are shared with the `LAB=0` build and stay unedited —
+changing one would break `--original`. See `docs/decisions/0012`.
 
 `tetrislab.trep-source.json` is the catalogue. Its dimensions are load-bearing:
 layouts carry no `.end` label, so a wrong figure shows a plausible wrong screen
@@ -125,10 +126,14 @@ built it — apply the patch to your own ROM with a browser BPS patcher, then lo
 the result into an emulator. No ROM data is published: the patch is 2 KB and
 your ROM stays on your device.
 
+Each channel also carries `tetrislab.sym`, `tetrislab.map` and
+`tetrislab.trep.json` — everything [TREP](https://tolstoj-82.github.io/apps/trep/)
+needs beside a patched ROM to open the build and edit its screens. They are
+symbol names and addresses, not ROM data.
+
 `tools/nightly.sh [channel]` does either by hand, for a branch with no pull
 request open yet. Both are pre-releases, so tagged releases keep the "Latest"
-badge, and both carry the **patch only** — never attach a `.gb`, see
-`CLAUDE.md` §10.
+badge, and **neither ever carries a `.gb`** — see `CLAUDE.md` §10.
 
 Fork pull requests are skipped: their token cannot write releases, and a fork
 should not be able to publish to this repository anyway.

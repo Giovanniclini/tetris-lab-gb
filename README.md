@@ -156,8 +156,7 @@ the number of tens to clear — so a level 9 start levels up at 100 lines and th
 of thousands, so 5 on level 18 is a maxout trainer. Instant restart then repeats
 the same drill.
 
-Modelled on TetrisGYM's `TRANSITION`, minus its score preset: that exists for NES's pace
-readout, which the Game Boy does not have.
+Modelled on TetrisGYM's `TRANSITION`, including its score preset.
 
 ### Seed
 

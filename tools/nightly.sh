@@ -11,6 +11,10 @@
 #
 #   https://github.com/Giovanniclini/tetris-lab-gb/releases/download/<channel>/tetrislab.bps
 #
+# Each channel also carries the .sym, .map and .trep.json, which is everything
+# TREP needs beside a patched ROM. They hold symbol names and addresses, not ROM
+# data.
+#
 # preview exists because a build you can only try after merging is a build you
 # cannot use to decide whether to merge.
 #
@@ -23,6 +27,10 @@ cd "$(dirname "$0")/.."
 
 channel="${1:-nightly}"
 python3 build.py --patch >/dev/null
+
+# --patch builds the Lab ROM before the stock one it diffs against, so the
+# symbol, map and TREP files are all present by now. Never add the .gb.
+artifacts="build/tetrislab.bps build/tetrislab.sym build/tetrislab.map build/tetrislab.trep.json"
 sha=$(git rev-parse --short HEAD)
 subject=$(git log -1 --pretty=%s)
 built=$(date -u '+%Y-%m-%d %H:%M UTC')
@@ -48,6 +56,13 @@ Built $built from *$subject*.
 3. Load the result into a Game Boy emulator.
 
 Your ROM never leaves your device, and no ROM data is published here.
+
+### Designing screens
+
+\`tetrislab.sym\`, \`tetrislab.map\` and \`tetrislab.trep.json\` are what
+[TREP](https://tolstoj-82.github.io/apps/trep/) needs to open this build and show its
+tilesets and background maps as editable pictures. Patch your own ROM as above, then point
+TREP at it with these three alongside.
 NOTES
 )
 
@@ -55,9 +70,9 @@ if gh release view "$channel" >/dev/null 2>&1; then
     git tag -f "$channel" >/dev/null
     git push -f origin "$channel" >/dev/null
     gh release edit "$channel" --title "$title" --notes "$notes" >/dev/null
-    gh release upload "$channel" build/tetrislab.bps --clobber >/dev/null
+    gh release upload "$channel" $artifacts --clobber >/dev/null
 else
-    gh release create "$channel" build/tetrislab.bps \
+    gh release create "$channel" $artifacts \
         --title "$title" --notes "$notes" --prerelease
 fi
 

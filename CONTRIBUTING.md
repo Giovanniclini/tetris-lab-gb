@@ -125,10 +125,14 @@ built it — apply the patch to your own ROM with a browser BPS patcher, then lo
 the result into an emulator. No ROM data is published: the patch is 2 KB and
 your ROM stays on your device.
 
+Each channel also carries `tetrislab.sym`, `tetrislab.map` and
+`tetrislab.trep.json` — everything [TREP](https://tolstoj-82.github.io/apps/trep/)
+needs beside a patched ROM to open the build and edit its screens. They are
+symbol names and addresses, not ROM data.
+
 `tools/nightly.sh [channel]` does either by hand, for a branch with no pull
 request open yet. Both are pre-releases, so tagged releases keep the "Latest"
-badge, and both carry the **patch only** — never attach a `.gb`, see
-`CLAUDE.md` §10.
+badge, and **neither ever carries a `.gb`** — see `CLAUDE.md` §10.
 
 Fork pull requests are skipped: their token cannot write releases, and a fork
 should not be able to publish to this repository anyway.

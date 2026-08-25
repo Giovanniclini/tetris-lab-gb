@@ -19,7 +19,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tools.emu import Tetris, hATypeLevel, GS_IN_GAME_MAIN  # noqa: E402
+from tools.emu import (Tetris, hATypeLevel, GS_IN_GAME_MAIN,  # noqa: E402
+                       GS_A_TYPE_SELECTION_MAIN)
 
 OUT = ROOT / "assets" / "screens"
 SCALE = 3
@@ -95,6 +96,13 @@ def main():
             t.press("right")
         shoot(t, "transition-menu")
 
+        # TRANSITION takes its level from the level select, like every other
+        # trainer, so starting it is two presses and not one. Level 9 is the
+        # drill worth a picture: it starts on 90 lines, ten from transition.
+        t.press("start")
+        t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+        while t[hATypeLevel] < 9:
+            t.press("right")
         t.press("start")
         t.run_until_state(GS_IN_GAME_MAIN)
         t.tick(40)

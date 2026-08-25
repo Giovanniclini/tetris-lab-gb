@@ -42,6 +42,36 @@ LabDrillApply::
 	xor  a
 	ld   [wLabDrillPending], a
 
+	ld   a, [wLabDrillScore]
+	and  a
+	jr   z, .noPreset               ; nothing to preset, and nothing to draw
+
+; The row's value is the score you start on, in hundreds of thousands - so 5
+; starts you at 500 000. Ten and above overflow into the seventh digit rather
+; than writing a non-decimal nibble into the top BCD byte: A is 1 000 000.
+	ld   b, 0
+	cp   10
+	jr   c, .haveDigit
+	sub  10
+	inc  b
+
+.haveDigit:
+	swap a                          ; the hundred-thousands digit
+	ld   [wScoreBCD + 2], a
+	ld   a, b
+	ld   [wLabScoreMillions], a
+	xor  a
+	ld   [wScoreBCD + 1], a
+	ld   [wScoreBCD], a
+
+; The original only redraws the score when drop points land and the piece has
+; finished falling ($01DB), so a preset sits invisible until then. Draw it.
+	inc  a
+	ld   [wLabScoreZeroMoved], a    ; the layout's zero is about to be overwritten
+	call LabDrawWholeScore
+
+.noPreset:
+
 ; hATypeLinesThresholdToPassForNextLevel holds the start level, which is also
 ; the number of tens that must be cleared to transition. One ten short of it is
 ; where the drill begins.

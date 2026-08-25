@@ -158,10 +158,9 @@ def test_a_trainer_gets_the_uncap_without_asking_for_it():
         with Tetris(ROM) as t:
             to_menu_row(t, mode)
             t.press("start")
-            if mode == MODE_TETRIS:              # goes via the level select
-                t.run_until_state(0x11)
-                t.tick(10)
-                t.press("start")
+            t.run_until_state(0x11)              # every mode goes via the level select
+            t.tick(10)
+            t.press("start")
             t.run_until_state(0x00)
             t.tick(150)
             for i, byte in enumerate(bcd(257)):

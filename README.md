@@ -9,7 +9,7 @@
 
 > **Status:** see [`docs/roadmap.md`](docs/roadmap.md).
 > Working today: the Lab menu, level select up to M, hearts, the transition trainer, SPS and instant restart.
-> [**Get v0.3.0**](https://github.com/Giovanniclini/tetris-lab-gb/releases) — or see
+> [**Get v0.4.0**](https://github.com/Giovanniclini/tetris-lab-gb/releases) — or see
 > [Play it](#play-it).
 
 ---
@@ -162,15 +162,14 @@ Modelled on TetrisGYM's `TRANSITION`, including its score preset.
 
 ![Seed entry](./assets/screens/seed.png)
 
-Same seed, same pieces — **and the same pieces as the community's existing seeded ROM**, because
-this uses that LFSR bit for bit rather than a better one. Interoperability is the whole point of
-a fairness mechanism.
+Same seed, same pieces — **and the same pieces as Toni's ROM**, because this runs his 24-bit LFSR
+exactly rather than a better one. Interoperability is the whole point of a fairness mechanism.
 
-`A` opens the four digits, `Left`/`Right` pick one, `Up`/`Down` change it, `A` closes them. The
+`A` opens the six digits, `Left`/`Right` pick one, `Up`/`Down` change it, `A` closes them. The
 seed applies to every mode, including B-Type's starting garbage, and is reloaded at the start of
 every game so a restart repeats a sequence rather than continuing it.
 
-`0000` means **no seed**: pieces come from the hardware timer, exactly as the original does.
+`000000` means **no seed**: pieces come from the hardware timer, exactly as the original does.
 
 ### B-Type
 

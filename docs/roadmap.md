@@ -14,9 +14,14 @@ current.
 | 4 — Replay, tooling and polish | not started |
 | 5 — Hardware validation and 1.0 | not started |
 
-**Released:** `v0.3.0`, 2026-08-22 — the rename, and everything the community
-reported. Still an alpha, and still ahead of the Milestone 2 gate below. BPS
-patch on [Releases](https://github.com/Giovanniclini/tetris-lab-gb/releases).
+**Released:** `v0.4.0`, 2026-08-25 — the score uncap, the rocket skip, Toni's
+24-bit seeds, the transition trainer matched to TetrisGYM's, and TREP metadata
+so the screens can be designed. Still an alpha, and still ahead of the Milestone
+2 gate below. BPS patch on
+[Releases](https://github.com/Giovanniclini/tetris-lab-gb/releases).
+
+**Seeds changed in `v0.4.0`.** They are six hex digits now, not four, and a seed
+from `v0.3.0` or earlier deals a different sequence.
 
 Outstanding across finished milestones:
 
@@ -294,7 +299,7 @@ GBTetris Discord. Real feedback should reorder everything after this point.
 **Acceptance criteria**
 - [ ] A board can be authored, saved, power-cycled and reloaded identically
 - [ ] The DAS indicator matches the real counter frame-for-frame, verified in an emulator trace
-- [ ] Score displays correctly past 999 999 without corrupting the original scoring path
+- [x] Score displays correctly past 999 999 without corrupting the original scoring path *(done in M2)*
 - [ ] Statistics match a known seeded sequence exactly
 - [ ] Sprite usage stays within the 10-per-scanline limit in all HUD configurations
 - [ ] `--original` still byte-exact

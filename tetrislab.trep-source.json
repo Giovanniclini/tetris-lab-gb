@@ -199,6 +199,14 @@
       "height": 6,
       "tileSet": "Celebration-Set",
       "filename": "layout_bricksAndLuigiScore.bin"
+    },
+    {
+      "name": "Lab Menu",
+      "symbol": "LabMenuScreen",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Game Play-Set",
+      "filename": "labMenuScreen.bin"
     }
   ]
 }

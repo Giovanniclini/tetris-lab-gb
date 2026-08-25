@@ -96,10 +96,11 @@ and the `.map`. Those four files are what [TREP](https://tolstoj-82.github.io/ap
 editable pictures. Nothing in the build runs TREP; it reads what the build
 publishes.
 
-What TREP is for here: **designing**. Screens the Lab owns are drawn at runtime
-rather than stored as layouts, so a design arrives as drawing code, not as a
-`.bin`. See `docs/decisions/0012` for why — the short version is that layout
-data is shared with the `LAB=0` build, and bank 0 has no room for a second copy.
+What TREP is for here: **designing**. A Lab screen's static background is a
+20x18 layout in `src/lab/data/`, so a design arrives back as a `.bin`; the
+labels, cursors and values on top of it are drawn at runtime. Original layouts
+in `src/original/data/` are shared with the `LAB=0` build and stay unedited —
+changing one would break `--original`. See `docs/decisions/0012`.
 
 `tetrislab.trep-source.json` is the catalogue. Its dimensions are load-bearing:
 layouts carry no `.end` label, so a wrong figure shows a plausible wrong screen

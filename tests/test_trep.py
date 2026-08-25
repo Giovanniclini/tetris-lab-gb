@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 MANIFEST = ROOT / "tetrislab.trep-source.json"
-DATA = ROOT / "src" / "original" / "data"
+DATA_DIRS = (ROOT / "src" / "original" / "data", ROOT / "src" / "lab" / "data")
 SYM = ROOT / "build" / "tetrislab.sym"
 GENERATED = ROOT / "build" / "tetrislab.trep.json"
 
@@ -44,7 +44,8 @@ def symbols():
 
 
 def test_every_declared_dimension_matches_the_data():
-    files = {p.name.lower(): p.stat().st_size for p in DATA.glob("*.bin")}
+    files = {p.name.lower(): p.stat().st_size
+             for d in DATA_DIRS for p in d.glob("*.bin")}
     for entry in manifest()["backgroundMaps"]:
         if "filename" not in entry:
             continue
@@ -133,7 +134,7 @@ def test_every_map_resolves_to_its_own_data_in_the_rom():
     """
     meta = json.loads(GENERATED.read_text())
     rom = (ROOT / "build" / "tetrislab.gb").read_bytes()
-    files = {p.name.lower(): p for p in DATA.glob("*.bin")}
+    files = {p.name.lower(): p for d in DATA_DIRS for p in d.glob("*.bin")}
     for entry in meta["backgroundMaps"]:
         if "filename" not in entry:
             continue

@@ -283,15 +283,8 @@ LabMenuDraw::
 	call FarCall                    ; LCD off, then the menu tileset
 	call Clear_wOam
 
-	ld   hl, _SCRN0
-	ld   bc, 32 * 18
-.blank:
-	ld   a, TILE_BLANK
-	ld   [hl+], a
-	dec  bc
-	ld   a, b
-	or   c
-	jr   nz, .blank
+	ld   de, LabMenuScreen
+	call CopyLayoutToScreen0
 
 	ld   hl, LabMenuTitle
 	ld   de, _SCRN0 + 2 * 32 + 3
@@ -446,6 +439,12 @@ LabMenuPutString::
 	ld   [de], a
 	inc  de
 	jr   LabMenuPutString
+
+
+; The menu's static background: 20x18, the shape every original screen uses, so
+; the original's own CopyLayoutToScreen0 paints it. Designed in TREP.
+LabMenuScreen::
+	INCBIN "src/lab/data/labMenuScreen.bin"
 
 
 PUSHC

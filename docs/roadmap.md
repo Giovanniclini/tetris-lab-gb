@@ -14,10 +14,9 @@ current.
 | 4 — Replay, tooling and polish | not started |
 | 5 — Hardware validation and 1.0 | not started |
 
-**Released:** `v0.4.0`, 2026-08-25 — the score uncap, the rocket skip, Toni's
-24-bit seeds, the transition trainer matched to TetrisGYM's, and TREP metadata
-so the screens can be designed. Still an alpha, and still ahead of the Milestone
-2 gate below. BPS patch on
+**Released:** `v0.5.0`, 2026-08-27 — Tolstoj's title screen with 1 PLAYER /
+2 PLAYER back, the score to 99 999 999, and the CRUNCH trainer. Still an alpha,
+and still ahead of the Milestone 2 gate below. BPS patch on
 [Releases](https://github.com/Giovanniclini/tetris-lab-gb/releases).
 
 **Seeds changed in `v0.4.0`.** They are six hex digits now, not four, and a seed
@@ -227,6 +226,19 @@ the moment the scene stopped playing.
 **Status 2026-08-22:** pushdown no longer applies at L and M, where it made the
 piece slower rather than faster. Reported by Tolstoj; the drop points go with
 it, by Giovanni's call — no push, nothing to reward.
+
+**Status 2026-08-26:** the title screen is back on `$06`/`$07` with Tolstoj's
+artwork, and the menu moved to `$08`/`$0E`. 2 PLAYER is chosen there again,
+which is where the original's serial code assigns a role
+(`docs/decisions/0007`).
+
+**Status 2026-08-27:** the score runs to 99 999 999 — Toni's format. The byte
+always held both digits; what it needed was the SCORE box's left edge to draw
+the eighth in.
+
+**Status 2026-08-27:** CRUNCH, the second trainer, matching TetrisGYM's mode and
+its value exactly. The menu is six of six rows again, so **the scrolling list is
+what gates the next trainer.**
 
 Work follows the revised list in `docs/community-research.md` §6.2:
 

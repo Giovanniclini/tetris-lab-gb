@@ -288,6 +288,40 @@ def test_the_title_screen_has_exactly_one_cursor():
         assert (t[one], t[two]) == (0x9C, 0x32), "the arrow did not move back"
 
 
+def test_left_and_right_choose_a_side_rather_than_toggling():
+    """How the original reads this screen ($04A7): Left and Right each choose
+    one side, and pressing for the side already chosen does nothing. Select is
+    the thing that flips.
+
+    Treating either direction as a flip is worse than untidy - a double-tap of
+    Right launches a one-player game, and a double-tap of Left opens the link
+    handshake, which busy-waits for a partner that is not there.
+    """
+    one, two = 0x9800 + 15 * 32, 0x9800 + 15 * 32 + 10
+
+    with Tetris(ROM) as t:
+        t.to_title()
+        t.tick(20)
+        assert t[hIs2Player] == 0, "should open on 1 PLAYER"
+
+        t.press("right")
+        assert t[hIs2Player] == 1, "Right should choose 2 PLAYER"
+        t.press("right")
+        assert t[hIs2Player] == 1, "a second Right must not send it back"
+
+        t.press("left")
+        assert t[hIs2Player] == 0, "Left should choose 1 PLAYER"
+        t.press("left")
+        assert t[hIs2Player] == 0, "a second Left must not send it back"
+
+        t.press("select")
+        assert t[hIs2Player] == 1, "Select flips"
+        t.press("select")
+        assert t[hIs2Player] == 0, "and flips back"
+
+        assert (t[one], t[two]) == (0x9C, 0x32), "the arrow disagrees with the side"
+
+
 def test_gameplay_survives_the_replaced_title_init():
     """The falling piece collides against wGameScreenBuffer, and it is the
     title init that puts the walls and floor there. Replacing that init without

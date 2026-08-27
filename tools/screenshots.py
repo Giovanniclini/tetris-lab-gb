@@ -64,7 +64,7 @@ def shoot(t, name):
     for y in range(h):
         row = bytearray()
         for x in range(w):
-            r, g, b = GREEN.get(int(fb[y][x][0]), (0, 0, 0))
+            r, g, b = GREEN.get(int(fb[y][x][0]), GREEN[0x00])
             row += bytes((r, g, b)) * SCALE
         rows.extend([bytes(row)] * SCALE)
     OUT.mkdir(parents=True, exist_ok=True)

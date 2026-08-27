@@ -24,9 +24,10 @@ ALLOWED_RANGES = [
     (0x02D3, 0x02D5, "HOOK_MAINLOOP_RST - MainLoop reset check routed via the Lab"),
     (0x02FB, 0x02FC, "HOOK_STATE_TABLE_00 - per-frame gameplay state, for trainers"),
     (0x0303, 0x0304, "HOOK_STATE_TABLE_04 - level-ended state routed via the Lab"),
-    (0x0307, 0x030C, "HOOK_STATE_TABLE_06/07/08 - the title screen is the Lab menu, "
-                     "drawn by $06 so the original never appears; B from a level "
-                     "select comes back to it"),
+    (0x0307, 0x030C, "HOOK_STATE_TABLE_06/07/08 - $06/$07 are the Lab title "
+                     "screen, the only states the original's serial code assigns "
+                     "a multiplayer role in; $08 paints the Lab menu, which B "
+                     "from a level select comes back to"),
     (0x0363, 0x0364, "HOOK_STATE_TABLE34 - the rocket scene, skipped whole"),
     (0x01E8, 0x01E8, "HOOK_SCORE_CELLS - score drawn one cell right, screen 0"),
     (0x01F2, 0x01F2, "HOOK_SCORE_CELLS - score drawn one cell right, screen 1"),

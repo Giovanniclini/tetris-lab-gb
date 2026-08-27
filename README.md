@@ -8,7 +8,7 @@
 > URL still redirects.
 
 > **Status:** see [`docs/roadmap.md`](docs/roadmap.md).
-> Working today: the Lab menu, level select up to M, hearts, the transition trainer, SPS and instant restart.
+> Working today: the Lab menu, level select up to M, hearts, the transition and crunch trainers, SPS and instant restart.
 > [**Get v0.4.0**](https://github.com/Giovanniclini/tetris-lab-gb/releases) — or see
 > [Play it](#play-it).
 
@@ -167,6 +167,24 @@ of thousands, so 5 on level 18 is a maxout trainer. Instant restart then repeats
 the same drill.
 
 Modelled on TetrisGYM's `TRANSITION`, including its score preset.
+
+### Crunch
+
+![Crunch on the menu](./assets/screens/crunch-menu.png)
+![Crunch in play](./assets/screens/crunch.png)
+
+Shrink the playfield to force cramped stacking. **Every increment of 4 takes a column off the
+left, every increment of 1 takes one off the right**, and the right resets after three — so `0`
+is the full board and `F` is three columns gone from each side. The value is
+[TetrisGYM's](https://github.com/kirjavascript/TetrisGYM) own, so a number means the same shape
+on both ROMs.
+
+The columns are blocks rather than walls, which is what makes a row complete when only the narrow
+gap is full. They are refilled every frame, because a line clear shifts the playfield down and
+leaves an empty row at the top — without that the board widens back out one clear at a time.
+
+Two people asked for this unprompted, and it is the only feature in
+[`docs/community-research.md`](docs/community-research.md) named twice.
 
 ### Seed
 

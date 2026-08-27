@@ -36,7 +36,7 @@ GREEN = {
     0x00: (0x0F, 0x38, 0x0F),
 }
 
-MODE_TETRIS, MODE_BTYPE, MODE_TRANSITION, MODE_SEED, MODE_MUSIC = range(5)
+MODE_TETRIS, MODE_BTYPE, MODE_TRANSITION, MODE_CRUNCH, MODE_SEED, MODE_MUSIC = range(6)
 
 PICKER_CELL = 0x9800 + 6 * 32 + 16
 TILE_BLANK = 0x2F
@@ -93,6 +93,19 @@ def main():
         t.to_menu()
         shoot(t, "menu")
 
+        goto(t, MODE_CRUNCH, mode)
+        for _ in range(10):                 # $A - two columns off each side
+            t.press("right")
+        shoot(t, "crunch-menu")
+        t.press("start")
+        t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+        t.press("start")
+        t.run_until_state(GS_IN_GAME_MAIN)
+        t.tick(60)
+        shoot(t, "crunch")
+
+    with Tetris("build/tetrislab.gb") as t:
+        t.to_menu()
         goto(t, MODE_SEED, mode)
         t.press("a")
         for nibble in (0xA, 0xC, 0xE, 0x1):

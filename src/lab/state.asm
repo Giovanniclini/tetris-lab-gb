@@ -105,6 +105,9 @@ wLabDrillPending:: db       ; set at game init, consumed on the first game frame
 wLabDrillScore::  db        ; TRANSITION's starting score, in hundreds of
                            ; thousands: 0-9 then A-F, so F is 1 500 000.
 wLabSeedDigit::   db        ; 0-5 while editing the seed row, else SEED_IDLE
+wLabCrunch::      db        ; CRUNCH's width, TetrisGYM's own value: every 4 is
+                           ; a column off the left, every 1 off the right
+wLabCrunchPending:: db     ; set at game init, consumed on the first game frame
 
 ; The controller as the player actually held it, before LabSuppressPushdown
 ; edits it. Anything that wants to *show* the input - toni asked for an input

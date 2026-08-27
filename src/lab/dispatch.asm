@@ -130,6 +130,7 @@ LabDispatch::
 	ld   [wLabScoreZeroMoved], a
 	call LabArmSeed
 	call LabArmDrill
+	call LabCrunchArm
 	ld   hl, GameState0a_InGameInit
 	ret
 
@@ -236,6 +237,8 @@ LabDispatch::
 ; setting them beforehand achieves nothing.
 .inGameMain:
 	call LabDrillApply
+	call LabCrunchApply
+	call LabCrunchFill
 	call LabSuppressPushdown
 	call LabDrawScoreCarry
 	ld   hl, GameState00_InGameMain

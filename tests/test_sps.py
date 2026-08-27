@@ -207,7 +207,7 @@ def test_the_same_seed_deals_the_same_sequence_after_a_game():
     def seeded_game(play_first):
         t = Tetris(ROM)
         t.to_menu()
-        for _ in range(3):
+        for _ in range(4):
             t.press("down")                    # SEED
         t.press("a")
         for nibble in (0x1, 0x1, 0x9, 0x9, 0x8, 0xF):
@@ -215,7 +215,7 @@ def test_the_same_seed_deals_the_same_sequence_after_a_game():
                 t.press("up")
             t.press("right")
         t.press("a")
-        for _ in range(3):
+        for _ in range(4):
             t.press("up")                      # back to TETRIS
         t.press("start")
         t.run_until_state(0x11)
@@ -254,7 +254,7 @@ def test_seed_can_be_entered_from_the_menu():
     Up/Down change it. See docs/decisions/0007."""
     with Tetris(ROM) as t:
         t.to_menu()
-        for _ in range(3):
+        for _ in range(4):
             t.press("down")                    # TETRIS -> ... -> SEED
         t.press("a")                           # open the digits
         for nibble in (0x1, 0x1, 0x9, 0x9, 0x8, 0xF):
@@ -262,7 +262,7 @@ def test_seed_can_be_entered_from_the_menu():
                 t.press("up")
             t.press("right")
         t.press("a")                           # close them
-        for _ in range(3):
+        for _ in range(4):
             t.press("up")                      # back up to TETRIS
         seed = (t[wLabSeedHi] << 16) | (t[wLabSeedMid] << 8) | t[wLabSeedLo]
         assert seed == 0x11998F, f"typed $11998F, got ${seed:06X}"

@@ -370,10 +370,11 @@ LabDrawHiScoreMillions::
 DEF MODE_TETRIS     EQU 0
 DEF MODE_BTYPE      EQU 1
 DEF MODE_TRANSITION EQU 2
-DEF MODE_LAUNCHABLE EQU 3           ; rows below this start a game
-DEF MODE_SEED       EQU 3
-DEF MODE_MUSIC      EQU 4
-DEF MODE_COUNT      EQU 5
+DEF MODE_CRUNCH     EQU 3
+DEF MODE_LAUNCHABLE EQU 4           ; rows below this start a game
+DEF MODE_SEED       EQU 4
+DEF MODE_MUSIC      EQU 5
+DEF MODE_COUNT      EQU 6
 
 DEF MENU_ROW0       EQU _SCRN0 + 6 * 32 + 3   ; first entry
 DEF MENU_STRIDE     EQU 2 * 32                ; a blank line between entries

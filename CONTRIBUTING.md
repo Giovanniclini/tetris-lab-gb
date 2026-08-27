@@ -86,6 +86,7 @@ python3 -m venv .venv
 .venv/bin/python tests/test_pieces.py
 .venv/bin/python tests/test_lfsr_vectors.py
 .venv/bin/python tests/test_trep.py
+.venv/bin/python tests/test_crunch.py
 ```
 
 ### Editing the graphics
@@ -95,6 +96,11 @@ and the `.map`. Those four files are what [TREP](https://tolstoj-82.github.io/ap
 — Tolstoj's ROM editor — opens to show the tilesets and background maps as
 editable pictures. Nothing in the build runs TREP; it reads what the build
 publishes.
+
+Trainers live in `src/lab/trainers/`, one file each. They are textual includes
+into the same section as everything else (ADR 0011), so the order they appear in
+`lab.asm` is the order they sit in the ROM — moving one is a pure path change
+and the build must come out byte-identical.
 
 What TREP is for here: **designing**. A Lab screen's static background is a
 20x18 layout in `src/lab/data/` and its tiles are a PNG in `src/lab/gfx/`, so a

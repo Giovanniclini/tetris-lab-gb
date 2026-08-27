@@ -24,7 +24,7 @@ LabMenuInput::
 ; free for the list because its list scrolls under a throttle and ours does not.
 	ld   a, [wLabSeedDigit]
 	cp   SEED_IDLE
-	jr   nz, .editingSeed
+	jp   nz, .editingSeed           ; jp: the CRUNCH row put this out of jr range
 
 	bit  PADB_START, c
 	jr   nz, .confirm
@@ -63,6 +63,8 @@ LabMenuInput::
 	ld   a, [wLabMode]
 	cp   MODE_MUSIC
 	jr   z, .adjustMusic
+	cp   MODE_CRUNCH
+	jr   z, .adjustCrunch
 	cp   MODE_TRANSITION
 	ret  nz
 
@@ -77,6 +79,15 @@ LabMenuInput::
 	xor  a
 .storeScore:
 	ld   [wLabDrillScore], a
+	jp   LabMenuSound
+
+
+; TetrisGYM's own value, so a number means the same shape on both ROMs.
+.adjustCrunch:
+	ld   a, [wLabCrunch]
+	add  b
+	and  CRUNCH_MAX                 ; 0-F, wrapping at both ends
+	ld   [wLabCrunch], a
 	jp   LabMenuSound
 
 .adjustMusic:
@@ -168,6 +179,8 @@ LabMenuLaunch::
 	jr   z, .bType
 	cp   MODE_TRANSITION
 	jr   z, .transition
+	cp   MODE_CRUNCH
+	jr   z, .transition             ; same handover: A-type, level from the picker
 
 	ld   a, GAME_TYPE_A_TYPE
 	ldh  [hGameType], a
@@ -264,6 +277,9 @@ LabMenuPaint::
 	cp   MODE_TRANSITION
 	call z, LabMenuPaintLevel
 	ld   a, b
+	cp   MODE_CRUNCH
+	call z, LabMenuPaintCrunch
+	ld   a, b
 	cp   MODE_SEED
 	call z, LabMenuPaintSeed
 	ld   a, b
@@ -300,6 +316,13 @@ LabMenuSeedCell::
 LabMenuPaintLevel::
 	call LabMenuValueCell
 	ld   a, [wLabDrillScore]
+	jp   LabPutTile
+
+
+; 0-F, and the font puts those tiles at $00-$0F, so the tile is the value.
+LabMenuPaintCrunch::
+	call LabMenuValueCell
+	ld   a, [wLabCrunch]
 	jp   LabPutTile
 
 
@@ -379,6 +402,7 @@ LabMenuLabels::
 	db "TETRIS", 0
 	db "B-TYPE", 0
 	db "TRANSITION", 0
+	db "CRUNCH", 0
 	db "SEED", 0
 	db "MUSIC", 0
 POPC

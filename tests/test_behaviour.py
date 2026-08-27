@@ -272,11 +272,48 @@ def test_the_score_is_right_aligned_in_the_spare_cell():
             assert t[base + 3 * 32 + 12] == 0x7B, "the box border was overwritten"
 
 
+def test_the_eighth_digit_appears_and_gives_the_box_its_edge_back():
+    """Past ten million the score takes the SCORE box's left edge as its eighth
+    cell, and gives it back underneath. A background tile carries its own light
+    backing, so the box reads one cell wider rather than broken.
+
+    The zero in the seventh is a real digit once the eighth exists: 10,000,050
+    reads "10000050", not "1 000050".
+    """
+    from tools.emu import sym
+    wLabScoreMillions = sym("wLabScoreMillions")
+    CELL, EDGE, EMPTY = 0x9800 + 3 * 32 + 12, 0x7B, 0x2F
+
+    with Tetris("build/tetrislab.gb") as t:
+        t.start_game_at(9)
+        t.tick(30)
+        for millions, low, want in (
+            (0x09, (0x99, 0x99, 0x99), [EDGE, 9, 9, 9, 9, 9, 9, 9]),
+            (0x10, (0x50, 0x00, 0x00), [1, 0, 0, 0, 0, 0, 5, 0]),
+            (0x99, (0x99, 0x99, 0x99), [9, 9, 9, 9, 9, 9, 9, 9]),
+        ):
+            t.pb.memory[wLabScoreMillions] = millions
+            for i, v in enumerate(low):
+                t.pb.memory[wScoreBCD + i] = v
+            t.tick(6)
+            got = [t[CELL + i] for i in range(8)]
+            assert got == want, (
+                f"millions ${millions:02X}: expected {want}, got {got}"
+            )
+
+        # back under a million: the box gets its edge back and our cell clears
+        t.pb.memory[wLabScoreMillions] = 0
+        t.tick(6)
+        assert [t[CELL], t[CELL + 1]] == [EDGE, EMPTY], (
+            "the box did not get its left edge back"
+        )
+
+
 def test_the_score_has_an_honest_ceiling():
-    """Seven digits is all there is room for - column 11 is inside the playfield
-    - so the score pins at 9,999,999 rather than counting into a digit it cannot
+    """Eight digits is all there is room for - column 11 is inside the playfield
+    - so the score pins at 99,999,999 rather than counting into a digit it cannot
     show. Refusing the carry alone is not enough: the add has already wrapped the
-    low six, so the score would *fall* from 9,999,950 to 9,000,350."""
+    low six, so the score would *fall* from 99,999,950 to 99,000,350."""
     from tools.emu import sym
     wScoreBCD = 0xC0A0
     wLabScoreMillions = sym("wLabScoreMillions")
@@ -285,8 +322,8 @@ def test_the_score_has_an_honest_ceiling():
     with Tetris("build/tetrislab.gb") as t:
         t.start_game_at(9)
         t.tick(120)
-        t.pb.memory[wLabScoreMillions] = 0x09
-        for i, v in enumerate((0x50, 0x99, 0x99)):     # 9,999,950
+        t.pb.memory[wLabScoreMillions] = 0x99
+        for i, v in enumerate((0x50, 0x99, 0x99)):     # 99,999,950
             t.pb.memory[wScoreBCD + i] = v
 
         for _ in range(1500):
@@ -307,7 +344,7 @@ def test_the_score_has_an_honest_ceiling():
 
         score = int(f"{t[wLabScoreMillions]:02X}{t[wScoreBCD+2]:02X}"
                     f"{t[wScoreBCD+1]:02X}{t[wScoreBCD]:02X}")
-        assert score == 9999999, f"expected the ceiling, got {score}"
+        assert score == 99999999, f"expected the ceiling, got {score}"
 
 
 TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]

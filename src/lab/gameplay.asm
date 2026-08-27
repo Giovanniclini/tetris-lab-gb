@@ -75,4 +75,6 @@ LabSuppressPushdown::
 ; cell right into the spare column. That leaves column 13 for the seventh digit,
 ; and the number stays put when it passes a million instead of shifting.
 DEF SCORE_CELL_FIRST EQU _SCRN0 + $6d       ; row 3, column 13 - ours alone
+DEF SCORE_CELL_EIGHTH EQU SCORE_CELL_FIRST - 1  ; column 12, the box's left edge
+DEF TILE_BOX_EDGE    EQU $7b                ; what the layout draws in that cell
 DEF SCREEN1_OFFSET   EQU 4                  ; $9800 -> $9C00, in the high byte

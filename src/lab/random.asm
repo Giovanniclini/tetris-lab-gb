@@ -124,13 +124,11 @@ LabScoreCarry::
 	cp   LOW(wScoreBCD + 2)
 	jr   nz, .notTheLiveScore
 
-; Stop at 9, so the ceiling is 9 999 999. There is no room on screen for an
-; eighth digit - column 11 is inside the playfield - so counting past 9 would
-; only make the display lie, which is worse than a ceiling ten times the
-; original's. Toni's build adds digits 7 and 8; when we take his format this
-; comes back.
+; Stop at 99, so the ceiling is 99 999 999 - Toni's format, digits 7 and 8. The
+; byte was always BCD and always held both; what was missing was somewhere to
+; draw the eighth, and the SCORE box's left edge is that somewhere.
 	ld   a, [wLabScoreMillions]
-	cp   $09
+	cp   $99
 	jr   z, .ceiling
 	add  $01
 	daa

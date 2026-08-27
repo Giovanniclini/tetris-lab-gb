@@ -22,6 +22,9 @@ LabDrawScoreCarry::
 	jr   z, .checkInitialZero
 	xor  a
 	ld   [wLabScoreCarryDrawn], a
+	ld   hl, SCORE_CELL_EIGHTH
+	ld   a, TILE_BOX_EDGE
+	call LabPutBothMaps
 	ld   hl, SCORE_CELL_FIRST
 	ld   a, TILE_EMPTY
 	jp   LabPutBothMaps
@@ -58,11 +61,28 @@ LabDrawScoreCarry::
 ; drop points land and the piece has finished falling ($01DB), so anything that
 ; sets the score outside that - a trainer presetting it - has to draw its own.
 LabDrawWholeScore::
+; The eighth digit sits on the box's left edge. A background tile brings its own
+; light backing, so the box reads one cell wider rather than broken - and the
+; edge goes back the moment the score drops under ten million.
 	ld   a, [wLabScoreMillions]
-	ld   hl, SCORE_CELL_FIRST
+	ld   hl, SCORE_CELL_EIGHTH
+	swap a
 	and  $0f
-	jr   nz, .seventh
+	jr   nz, .eighth
+	ld   a, TILE_BOX_EDGE           ; under ten million the box keeps its edge
+
+.eighth:
+	call LabPutBothMaps
+	inc  hl
+
+; Zero in the seventh is a real digit once the eighth exists - 10 000 050 reads
+; "10000050", not "1 000050" - so it blanks only when there are no millions.
+	ld   a, [wLabScoreMillions]
+	and  a
 	ld   a, TILE_EMPTY              ; under a million there is no seventh digit
+	jr   z, .seventh
+	ld   a, [wLabScoreMillions]
+	and  $0f
 
 .seventh:
 	call LabPutBothMaps

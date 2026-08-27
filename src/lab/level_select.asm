@@ -151,6 +151,8 @@ LabLevelSelectPost::
 	cp   GS_A_TYPE_SELECTION_MAIN
 	jr   nz, .leavingScreen
 
+	call LabRefreshHiScoreMillions
+
 	ld   a, [wLabFocus]
 	and  a
 	ret  z                          ; grid has focus: nothing to correct

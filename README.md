@@ -130,12 +130,16 @@ indicator beside `LEVEL`. They add ten levels of speed, and are withheld above l
 the original computes them as `min(level + 10, 20)`, which past 20 clamps *downward* and would
 make the game slower.
 
-The score no longer stops at 999,999 — it runs to 9,999,999. The original pins it there because three BCD bytes hold six
-digits; a seventh is kept alongside and drawn into the panel's left edge, which is where the room
-is. Seven digits is all the panel has room for — the spare cell to the right of the score — so it pins there rather than counting into a digit it cannot show.
+The score no longer stops at 999,999 — it runs to **99,999,999**, which is Toni's format. The
+original pins it at six digits because three BCD bytes hold six; the seventh and eighth are kept
+alongside in a byte that always had room for both. The seventh is drawn into the spare cell right
+of the score, and the eighth onto the `SCORE` box's left edge — a background tile brings its own
+light backing, so the box reads one cell wider rather than broken, and gets its edge back the
+moment the score drops under ten million. Eight digits is all the panel has room for: the next
+cell along is inside the playfield.
 
-High score entries carry the seventh digit too, in the dotted gap the original leaves between the
-name and the score, and they are ranked by it — otherwise a 1 000 050 stored as its low six digits
+High score entries carry both digits too, in the dotted gap the original leaves between the name
+and the score, and they are ranked by them — otherwise a 1 000 050 stored as its low six digits
 would lose to a 999 999.
 
 The rocket scene never plays. The original spends 2.4 seconds waiting and twenty-odd more on a

@@ -22,6 +22,7 @@ LabUpdateHighScores::
 	call DisplayDottedLinesForHighScore
 
 	call LabHiScoreLevel
+	ld   [wLabHiScoreLevelDrawn], a
 	call LabHiScoreSlot
 	push hl                         ; the seventh digits
 	push de                         ; the entries
@@ -33,7 +34,7 @@ LabUpdateHighScores::
 
 ; The original blanks leading zeros, so an entry past a million reads as its
 ; last digits alone - 1 000 544 as "544". Redraw those rows whole, all seven
-; digits, starting in the second of the two dotted cells the original leaves
+; digits, starting in the first of the two dotted cells the original leaves
 ; between the name and the score.
 ;
 ; hl = the row's seventh digit, de = its entry's high byte.
@@ -174,6 +175,22 @@ LabFileHighScore::
 ; The level whose high scores are on screen. The grid cursor is the level while
 ; it has focus; above the grid it is the picker, and hATypeLevel has been parked
 ; on the last grid cell to keep that cursor somewhere valid.
+; Moving the grid cursor is the original's handler, and it repaints the panel
+; without touching our two cells - so the digits of the level you were looking
+; at stayed on screen over every level after it. Redraw them when the level on
+; show changes, and only then: every cell waits for the LCD.
+LabRefreshHiScoreMillions::
+	call LabHiScoreLevel
+	ld   b, a
+	ld   a, [wLabHiScoreLevelDrawn]
+	cp   b
+	ret  z
+	ld   a, b
+	ld   [wLabHiScoreLevelDrawn], a
+	call LabHiScoreSlot
+	jp   LabDrawHiScoreMillions
+
+
 LabHiScoreLevel::
 	ld   a, [wLabFocus]
 	and  a
@@ -223,7 +240,7 @@ LabHiScoreSlot::
 
 
 LabDrawHiScoreMillions::
-	ld   bc, wGameScreenBuffer + $1a4 + 7
+	ld   bc, wGameScreenBuffer + $1a4 + 6
 	ld   a, 3
 
 .nextRow:
@@ -242,13 +259,21 @@ LabDrawHiScoreMillions::
 	push hl
 	jr   nz, .rowToScreen
 
-	ld   a, TILE_BLANK              ; no digit, and nothing left from before
+; No digits: blank both cells, which is what the stock ROM shows there - its
+; dotted run has a gap in it, and tests/test_labmenu.py compares the whole
+; screen against the real thing. hl is left where it was, because
+; .cellsToScreen blits from it: advancing it here copies one cell past the pair
+; and leaves the first digit on screen through every later level.
+	ld   a, TILE_BLANK
 	ld   [hl], a
-	ld   c, 1
+	inc  hl
+	ld   [hl], a
+	dec  hl
+	ld   c, 2
 	jr   .toScreen
 
 .rowToScreen:
-	ld   c, 7
+	ld   c, 8
 
 .toScreen:
 	call .cellsToScreen
@@ -272,10 +297,24 @@ LabDrawHiScoreMillions::
 	jr   nz, .nextRow
 	ret
 
-; a = the seventh digit, de = the entry's high byte, bc = where it goes.
+; a = the entry's millions byte, de = its high byte, bc = where it goes.
+;
+; Two digits, not one: the byte is BCD and holds both. A zero in the eighth is
+; a leading zero and stays blank - the original suppresses those, and an entry
+; of 1 000 050 reading as "01 000 050" would be the only number on the screen
+; padded that way.
 .drawRow:
 	push bc
 	pop  hl
+	ld   b, a
+	swap a
+	and  $0f
+	jr   nz, .eighth
+	ld   a, TILE_BLANK
+.eighth:
+	ld   [hl+], a
+	ld   a, b
+	and  $0f
 	ld   [hl+], a
 	ld   c, 3
 

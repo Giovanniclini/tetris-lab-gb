@@ -37,6 +37,8 @@ LEVEL = 9
 # which is exactly how this shipped broken once.
 ROW_VRAM = 0x9800 + 13 * 32 + 4
 SEVENTH = 7
+EIGHTH = 6
+BLANK = 0x2F        # what the stock ROM leaves in the gap between name and score
 
 
 def slot(level=LEVEL):
@@ -51,7 +53,8 @@ def entries(t, level=LEVEL):
         low = (t[b] & 0x0F) + 10 * (t[b] >> 4)
         mid = (t[b + 1] & 0x0F) + 10 * (t[b + 1] >> 4)
         high = (t[b + 2] & 0x0F) + 10 * (t[b + 2] >> 4)
-        m = t[wLabHiScoreMillions + level * 3 + i]
+        b = t[wLabHiScoreMillions + level * 3 + i]
+        m = (b & 0x0F) + 10 * (b >> 4)
         out.append(m * 1000000 + high * 10000 + mid * 100 + low)
     return out
 
@@ -60,6 +63,13 @@ def bcd(n):
     """The low six digits of n, as the three bytes the game stores."""
     d = f"{n % 1000000:06d}"
     return [int(d[4:6], 16), int(d[2:4], 16), int(d[0:2], 16)]
+
+
+def millions(n):
+    """Digits seven and eight, as the one BCD byte that holds them. Writing the
+    plain integer works only up to nine - ten is $0A, which is not a number the
+    game can draw."""
+    return int(f"{(n // 1000000) % 100:02d}", 16)
 
 
 def play_and_file(score, table=(0, 0, 0)):
@@ -72,11 +82,11 @@ def play_and_file(score, table=(0, 0, 0)):
     for i, value in enumerate(table):
         for j, byte in enumerate(bcd(value)):
             t.pb.memory[slot() + i * 3 + j] = byte
-        t.pb.memory[wLabHiScoreMillions + LEVEL * 3 + i] = value // 1000000
+        t.pb.memory[wLabHiScoreMillions + LEVEL * 3 + i] = millions(value)
 
     for j, byte in enumerate(bcd(score)):
         t.pb.memory[wScoreBCD + j] = byte
-    t.pb.memory[wLabScoreMillions] = score // 1000000
+    t.pb.memory[wLabScoreMillions] = millions(score)
 
     t.pb.memory[0xFFE1] = GS_A_TYPE_SELECTION_INIT   # hGameState: the game ended
     t.tick(120)
@@ -132,11 +142,44 @@ def test_the_seventh_digit_survives_onto_the_level_select():
 
 def test_a_six_digit_entry_still_reads_as_the_original_drew_it():
     """Rows under a million are the original's to draw - we must not touch
-    them, or the leading-zero blanking it does would be undone."""
+    them, or the leading-zero blanking it does would be undone.
+
+    That includes the two cells our digits would occupy: with no millions to
+    show they are blank, which is exactly what the stock ROM draws there - its
+    run of dots has a gap in it.
+    """
     with play_and_file(400) as t:
         row = [t[ROW_VRAM + i] for i in range(14)]
-        assert row[SEVENTH] == 0x2F, f"column 7 should be blank, got ${row[SEVENTH]:02X}"
+        assert row[EIGHTH] == BLANK and row[SEVENTH] == BLANK, (
+            f"our cells should look like the stock ROM's: "
+            f"${row[EIGHTH]:02X} ${row[SEVENTH]:02X}"
+        )
         assert row[11:14] == [4, 0, 0], f"the score itself moved: {row}"
+
+
+def test_the_millions_do_not_survive_a_change_of_level():
+    """Each level has its own entries, so the digits from the level you were
+    looking at must not stay on screen when you move off it.
+
+    They did: the buffer was written at both cells and blitted from the second,
+    so the leading digit was never sent up and sat there through every level
+    change until something else overwrote it.
+    """
+    with play_and_file(10000350) as t:
+        t.press("start")                         # accept the name
+        t.tick(30)
+        assert t.state == 0x11, f"expected the level select, got ${t.state:02X}"
+        assert [t[ROW_VRAM + EIGHTH + i] for i in range(2)] == [1, 0], (
+            "the level that was played is not showing its own millions"
+        )
+
+        before = t[hATypeLevel]
+        t.press("left" if before else "right")   # any other level
+        t.tick(40)
+        assert t[hATypeLevel] != before, "the cursor did not move"
+        assert [t[ROW_VRAM + EIGHTH + i] for i in range(2)] == [BLANK, BLANK], (
+            "a digit from the previous level is still on screen"
+        )
 
 
 def test_a_trainer_gets_the_uncap_without_asking_for_it():

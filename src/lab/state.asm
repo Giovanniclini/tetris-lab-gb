@@ -112,6 +112,11 @@ wLabSeedDigit::   db        ; 0-5 while editing the seed row, else SEED_IDLE
 wLabButtonsHeld::    db
 wLabButtonsPressed:: db
 
+; The level whose millions are currently on the high score panel. The original's
+; own handler repaints that panel when the grid cursor moves and knows nothing
+; about our two cells, so this is what tells us they need redrawing.
+wLabHiScoreLevelDrawn:: db
+
 ; Digits 7 and 8 of the score, BCD. The original's three bytes hold the low six
 ; and wrap; this counts the carries. See LabScoreCarry in random.asm.
 wLabScoreMillions::  db

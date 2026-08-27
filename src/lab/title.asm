@@ -79,8 +79,9 @@ LabTitleDraw::
 
 
 ; The arrow the original marks a selection with. It lives in the title-screen
-; tileset, which the menu does not load and which Tolstoj's artwork overwrites,
-; so both Lab screens copy the one tile they need into $FF instead.
+; tileset, which the menu never loads, so the menu copies the one tile it needs
+; into $FF. The title screen calls none of this - its cursor is the arrow
+; Tolstoj drew into the artwork.
 LabPutCursorTile::
 	ld   hl, LabCursorTile
 	ld   de, _VRAM + MENU_CURSOR * 16
@@ -131,15 +132,34 @@ LabTitleMain::
 LabTitleInput::
 	ldh  a, [hButtonsPressed]
 	ld   b, a
-
-	and  PADF_LEFT|PADF_RIGHT
-	jr   z, .noMove
 	ldh  a, [hIs2Player]
-	xor  $01                        ; two sides, so either press is a toggle
+
+; How the original reads this screen ($04A7): Select flips between the two,
+; Left and Right choose one, and a press for the side already chosen does
+; nothing. Treating either direction as a flip means a double-tap of Right
+; launches a one-player game and a double-tap of Left opens the link handshake.
+	bit  PADB_SELECT, b
+	jr   nz, .flip
+	bit  PADB_RIGHT, b
+	jr   nz, .pressedRight
+	bit  PADB_LEFT, b
+	jr   nz, .pressedLeft
+	jr   .noMove
+
+.pressedRight:
+	and  a
+	ret  nz                         ; already 2 PLAYER
+	jr   .flip
+
+.pressedLeft:
+	and  a
+	ret  z                          ; already 1 PLAYER
+
+.flip:
+	xor  $01
 	ldh  [hIs2Player], a
 	ld   a, SND_MOVING_SELECTION
 	ld   [wSquareSoundToPlay], a
-
 	ret
 
 .noMove:

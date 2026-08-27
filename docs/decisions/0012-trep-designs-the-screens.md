@@ -54,9 +54,12 @@ load the original tileset are unaffected.
 * **The font is 39 tiles, so a tileset after it starts at `$27`.** Measured out
   of VRAM rather than counted, because the menu's loader copies ten further tiles
   in between and it is easy to derive the wrong number.
-* **A sprite's tile must exist under every tileset it appears over.** The title
-  screen's cursor uses the font's `*` at `$26` rather than the original's arrow at
-  `$58`, which the artwork overwrites.
+* **A cursor is whatever the screen it sits on actually has.** The title screen's
+  is the arrow Tolstoj drew into the artwork, moved between cells; a sprite over
+  it would be a second cursor, with only one of them moving. The menu's tileset
+  has no arrow at all — the original keeps one in the title-screen tileset — so
+  the menu copies that single tile into `$FF`, past anything its layout draws
+  and rewritten on every screen entry.
 * **A map is 20x18**, the shape every original screen uses. The VBlank handler
   zeroes `rSCX`/`rSCY` every frame (`$01FF`), so nothing outside those 20
   columns is ever visible and a map need not cover the 32-wide tilemap.

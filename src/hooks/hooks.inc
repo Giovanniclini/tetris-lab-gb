@@ -119,7 +119,7 @@
 ;                                            of the storage, not a rule. The
 ;                                            three bytes after it are left as
 ;                                            they were and are unreachable.
-;   LAB_BANK1_GFX     $7FF6-$7FFF        10  LabLoadMenuGfx, in the gap after
+;   LAB_BANK1_GFX     $7FF6-$7FFF        10  LabLoadGfx, in the gap after
 ;                                            the sound thunks at the very end of
 ;                                            bank 1. Split from the section
 ;                                            below because neither gap is big

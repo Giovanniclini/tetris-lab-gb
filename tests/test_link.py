@@ -79,19 +79,20 @@ def test_the_master_handshake_is_the_originals_bytes():
     _find(lab, stock[0x04C5:0x04CD])
 
 
-def test_boot_goes_straight_to_the_menu():
-    """No copyright screen, no 1P/2P screen."""
+def test_boot_goes_straight_to_the_title_screen():
+    """The copyright screen is skipped, so the 1P/2P choice is the first thing
+    a boot reaches."""
     with Tetris(ROM) as t:
         for frames in range(400):
             t.pb.tick()
             if t.state == GS_TITLE_SCREEN_MAIN:
                 break
         else:
-            raise AssertionError("never reached the menu")
+            raise AssertionError("never reached the title screen")
         assert frames < 150, f"took {frames} frames ({frames / 59.7:.1f}s)"
 
 
-def test_the_menu_pings_every_frame():
+def test_the_title_screen_pings_every_frame():
     """A second Game Boy finds us by seeing this. The stock title screen sends
     it every frame; so must whatever replaces that screen."""
     with Tetris(ROM) as t:
@@ -137,7 +138,7 @@ def test_two_player_with_a_partner_already_found_starts():
         )
 
 
-def test_two_player_with_no_cable_stays_on_the_menu():
+def test_two_player_with_no_cable_stays_on_the_title_screen():
     """The transfer still completes with nothing attached - the byte comes back
     as $FF - so the wait cannot hang, and no role is assigned."""
     with Tetris(ROM) as t:

@@ -112,7 +112,7 @@ def build_rom(lab: int, no_sram: bool = False):
     tc = rgbds.ensure(BUILD)
 
     print("graphics:")
-    gfx.build(tc / "rgbgfx", SRC, OBJ / "build")
+    gfx.build(tc / "rgbgfx", SRC, OBJ / "build", lab=bool(lab))
 
     print("assemble:")
     OBJ.mkdir(parents=True, exist_ok=True)

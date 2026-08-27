@@ -9,6 +9,12 @@ INCLUDE "include/structs.s"     ; rb offsets, likewise
 
 INCLUDE "lab/levels.inc"
 
+; The version, in one place. It reaches the ROM's own string and the title
+; screen's VERSION box from here, so a release bumps this line and nothing else.
+; Three characters: the artwork leaves five cells and spends two of them on the
+; gap after "VERSION", which is what keeps it reading as two words.
+DEF LAB_VERSION EQUS "\"0.5\""
+
 ; ---------------------------------------------------------------------------
 ; The Lab, module by module.
 ;
@@ -26,6 +32,7 @@ INCLUDE "lab/dispatch.asm"
 INCLUDE "lab/level_select.asm"
 INCLUDE "lab/seed.asm"
 INCLUDE "lab/high_scores.asm"
+INCLUDE "lab/title.asm"
 INCLUDE "lab/menu.asm"
 INCLUDE "lab/drills.asm"
 INCLUDE "lab/gameplay.asm"

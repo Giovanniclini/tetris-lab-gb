@@ -97,8 +97,9 @@ editable pictures. Nothing in the build runs TREP; it reads what the build
 publishes.
 
 What TREP is for here: **designing**. A Lab screen's static background is a
-20x18 layout in `src/lab/data/`, so a design arrives back as a `.bin`; the
-labels, cursors and values on top of it are drawn at runtime. Original layouts
+20x18 layout in `src/lab/data/` and its tiles are a PNG in `src/lab/gfx/`, so a
+design arrives back as a `.bin` and a `.png`; the labels, cursors and values on
+top of them are drawn at runtime. Original layouts
 in `src/original/data/` are shared with the `LAB=0` build and stay unedited —
 changing one would break `--original`. See `docs/decisions/0012`.
 

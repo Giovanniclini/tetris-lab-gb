@@ -46,6 +46,15 @@
       "filename": "rocketScene.png",
       "width": 16,
       "show": true
+    },
+    {
+      "name": "Lab Title",
+      "symbol": "LabTitleTiles",
+      "tileCount": 128,
+      "bitsPerPixel": 2,
+      "filename": "labTitleScreen.png",
+      "width": 16,
+      "show": true
     }
   ],
   "tileSets": [
@@ -68,6 +77,13 @@
       "name": "Celebration-Set",
       "regions": [
         "Rocket Scene"
+      ]
+    },
+    {
+      "name": "Lab Title-Set",
+      "regions": [
+        "ASCII",
+        "Lab Title"
       ]
     }
   ],
@@ -199,6 +215,14 @@
       "height": 6,
       "tileSet": "Celebration-Set",
       "filename": "layout_bricksAndLuigiScore.bin"
+    },
+    {
+      "name": "Lab Title",
+      "symbol": "LabTitleScreen",
+      "width": 20,
+      "height": 18,
+      "tileSet": "Lab Title-Set",
+      "filename": "labTitleScreen.bin"
     },
     {
       "name": "Lab Menu",

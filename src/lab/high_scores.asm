@@ -330,12 +330,11 @@ LabDrawHiScoreMillions::
 
 DEF MODE_TETRIS     EQU 0
 DEF MODE_BTYPE      EQU 1
-DEF MODE_2PLAYER    EQU 2
-DEF MODE_TRANSITION EQU 3
-DEF MODE_LAUNCHABLE EQU 4           ; rows below this start a game
-DEF MODE_SEED       EQU 4
-DEF MODE_MUSIC      EQU 5
-DEF MODE_COUNT      EQU 6
+DEF MODE_TRANSITION EQU 2
+DEF MODE_LAUNCHABLE EQU 3           ; rows below this start a game
+DEF MODE_SEED       EQU 3
+DEF MODE_MUSIC      EQU 4
+DEF MODE_COUNT      EQU 5
 
 DEF MENU_ROW0       EQU _SCRN0 + 6 * 32 + 3   ; first entry
 DEF MENU_STRIDE     EQU 2 * 32                ; a blank line between entries
@@ -349,7 +348,10 @@ DEF MENU_VALUE_COL  EQU 13                    ; the row's value, right of it
 ; other row moves.
 DEF MENU_SEED_COL   EQU 11
 DEF SEED_DIGITS     EQU 6
-DEF MENU_CURSOR     EQU $26                   ; the font's "*"
+; The original's arrow, put where nothing else lives. Neither Lab screen's
+; tileset reaches $FF with anything it draws, and every screen reloads its
+; tileset on entry, so one tile here is ours for as long as we are on screen.
+DEF MENU_CURSOR     EQU $ff
 DEF SEED_IDLE       EQU $ff                   ; wLabSeedDigit when not editing
 
 NEWCHARMAP labfont
@@ -389,6 +391,7 @@ NEWCHARMAP labfont
 	CHARMAP "X", $21
 	CHARMAP "Y", $22
 	CHARMAP "Z", $23
+	CHARMAP ".", $24
 	CHARMAP "-", $25
 	CHARMAP " ", TILE_BLANK
 SETCHARMAP main

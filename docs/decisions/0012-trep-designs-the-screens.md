@@ -25,6 +25,12 @@ into bank 2 beside the code that paints it and catalogued like any other map, so
 it can be designed in TREP and arrive back as a `.bin`. Everything that changes —
 labels, cursors, values — is still drawn at runtime.
 
+**A Lab screen may bring its own tiles too**: a PNG in `src/lab/gfx/`, converted
+by the same `tools/gfx.py` pipeline with its own declared byte count, INCBINed
+into bank 2 and copied over VRAM after the original tileset is loaded. The LCD is
+off during a screen's paint, so the second pass is free, and the screens that
+load the original tileset are unaffected.
+
 **`src/original/data/` stays vendored and unedited.**
 
 ## Where a layout can live
@@ -45,6 +51,12 @@ labels, cursors, values — is still drawn at runtime.
 * **TREP is a design tool for Lab screens and an editor for original ones.** An
   export drops straight into a Lab screen. Dropping one into an original screen
   would need its own justification.
+* **The font is 39 tiles, so a tileset after it starts at `$27`.** Measured out
+  of VRAM rather than counted, because the menu's loader copies ten further tiles
+  in between and it is easy to derive the wrong number.
+* **A sprite's tile must exist under every tileset it appears over.** The title
+  screen's cursor uses the font's `*` at `$26` rather than the original's arrow at
+  `$58`, which the artwork overwrites.
 * **A map is 20x18**, the shape every original screen uses. The VBlank handler
   zeroes `rSCX`/`rSCY` every frame (`$01FF`), so nothing outside those 20
   columns is ever visible and a map need not cover the 32-wide tilemap.

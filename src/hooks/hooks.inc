@@ -76,23 +76,25 @@
 ;                                            is a demo piece table that only the
 ;                                            attract demo reads.
 ;   HOOK_STATE_TABLE06 $0307-$030C       6  Jump-table entries for $06 (title
-;                                            init), $07 (title main) and $08.
-;                                            The title screen becomes the Lab
-;                                            menu, drawn by $06 so the original
-;                                            never appears even for a frame. $07 is the
-;                                            screen, which becomes the Lab menu.
-;                                            It has to be this state and no
-;                                            other: SerialFunc0_titleScreen
-;                                            ($0078) only assigns a multiplayer
-;                                            role while hGameState is $07, and
-;                                            bounces the game back to the title
-;                                            from anywhere else. The only hook
-;                                            that replaces an original handler
-;                                            rather than chaining to it - and
-;                                            for $08, which B on a level select
-;                                            reaches, sent back to the menu so
-;                                            the A-TYPE/B-TYPE screen the menu
-;                                            replaced is never drawn.
+;                                            init), $07 (title main) and $08
+;                                            (game type init). $06 and $07 are
+;                                            the Lab title screen - Tolstoj's
+;                                            artwork and the 1 PLAYER / 2 PLAYER
+;                                            choice - and they have to be these
+;                                            states and no others:
+;                                            SerialFunc0_titleScreen ($0078)
+;                                            assigns a multiplayer role only
+;                                            while hGameState is $07, and forces
+;                                            every other state back to $06. $08
+;                                            paints the Lab menu, which is also
+;                                            where B on a level select comes
+;                                            back to. Replacements, not
+;                                            extensions: the original handlers
+;                                            never run.
+;   HOOK_STATE_TABLE0E $0317-$0318       2  Jump-table entry for $0E, the game
+;                                            type screen's main state, which
+;                                            runs the Lab menu. Paired with $08
+;                                            the way the original paired them.
 ;   HOOK_STATE_TABLE34 $0363-$0364       2  Jump-table entry for $34, the wait
 ;                                            before the rocket scene. Sent to
 ;                                            the plain game over screen, which

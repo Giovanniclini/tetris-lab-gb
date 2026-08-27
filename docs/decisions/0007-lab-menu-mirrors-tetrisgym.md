@@ -15,17 +15,17 @@ past `MODE_GAME_QUANTITY`, which is how modes and settings are separated.
 
 ## Decision
 
-**Mirror that list, on the title screen.** The Lab redraws its tilemap and
-handles its own input; the original handler never runs. Two two-byte jump-table
-redirects, nothing shifts: `$07` for the menu and `$24` to skip the copyright
-screen. The A-TYPE/B-TYPE screen and the 8.5-second copyright wait are both
-gone, and boot reaches the menu in 1.3 s instead of 9.8 s.
+**Mirror that list, on the A-TYPE/B-TYPE screen's own states** — `$08` paints
+it, `$0E` runs it, the pair the original used. The Lab redraws the tilemap and
+handles its own input; the original handlers never run. The copyright screen is
+skipped at `$24`, so boot reaches the title in 1.3 s instead of 9.8 s, and the
+menu is one press past it.
 
-**It has to be `$07` and no other state.** `SerialFunc0_titleScreen` (`$0078`)
-only assigns a multiplayer role while `hGameState` says `$07`, and *bounces the
-game back to the title from anywhere else*. A menu that hosts 2-player has to be
-that state. This is also why the earlier version, on `$0E`, would have
-misbehaved the moment a cable was attached.
+**The title screen keeps `$06`/`$07`, and 2 PLAYER is chosen there.**
+`SerialFunc0_titleScreen` (`$0078`) assigns a multiplayer role only while
+`hGameState` says `$07`, and forces every other state back to `$06`. Putting
+the choice anywhere else means either moving the rendezvous or being yanked off
+the screen the moment a cable is attached.
 
 Rows: `TETRIS`, `B-TYPE`, `TRANSITION`, `SEED`, `MUSIC`. Up/Down move,
 Left/Right edit the row's value, Start or A launches. `SEED` and `MUSIC` are
@@ -94,10 +94,11 @@ trainer stays selected so instant restart re-runs the drill.
 
 ## Two-player, and how it is tested
 
-**`2 PLAYER` is a menu row.** Link-cable head-to-head VS is CTWC-GB's *bracket
-format* (`docs/community-research.md` §2), so dropping it was never an option.
-Moving it meant taking over the rendezvous the title screen was doing: a passive
-ping every frame, and the master's announcement on confirm.
+**`2 PLAYER` is the title screen's right-hand option**, where the game has
+always put it. Link-cable head-to-head VS is CTWC-GB's *bracket format*
+(`docs/community-research.md` §2), so dropping it was never an option. The
+screen does what the original's did: a passive ping every frame, and the
+master's announcement on confirm.
 
 **Both are transcribed byte for byte**, not reimplemented — `tests/test_link.py`
 asserts the original's `$0488` and `$04C5` sequences appear verbatim in the Lab's
@@ -133,8 +134,7 @@ link play on this ROM on hardware.** That was equally true before this change.
   banks itself (ADR 0001). Seven bytes in the linker's own empty gap at `$6430`
   solve it. Without this the level select rendered the *title* screen's tiles —
   the same layout, unreadable.
-* **The title screen's init is replaced too**, so the original title never
-  appears — not on boot, not on the way back from a level select.
+* **The title screen's init is ours**, and the clears in it are load-bearing.
 
   What made that hard to get right: **the falling piece collides against
   `wGameScreenBuffer`, and it is the title init that puts the walls and floor
@@ -159,8 +159,8 @@ link play on this ROM on hardware.** That was equally true before this change.
   reached (ADR 0005). Nothing depends on the clearing — `Reset` zeroes all of
   HRAM at `$028A`, on cold boot and soft reset alike, so none of it can start as
   garbage.
-* **B on a level select returns to the menu.** It goes to `$08`, which would
-  otherwise draw the A-TYPE/B-TYPE screen the menu replaced.
+* **B on a level select returns to the menu.** It goes to `$08`, which is the
+  menu's own init.
 * **The line readout must be repainted by hand.** The original only redraws it
   on a line clear, so a drill would otherwise show `000` until the first one.
 * **Every tilemap cell the Lab paints with the LCD on goes through

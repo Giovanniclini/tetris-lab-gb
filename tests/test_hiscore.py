@@ -152,7 +152,7 @@ def test_a_trainer_gets_the_uncap_without_asking_for_it():
     sys.path.insert(0, str(ROOT / "tests"))
     from test_labmenu import to_menu_row
 
-    MODE_TETRIS, MODE_TRANSITION = 0, 3
+    MODE_TETRIS, MODE_TRANSITION = 0, 2
     results = {}
     for name, mode in (("TETRIS", MODE_TETRIS), ("TRANSITION", MODE_TRANSITION)):
         with Tetris(ROM) as t:

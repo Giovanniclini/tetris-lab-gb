@@ -129,16 +129,20 @@ class Tetris:
     # -- navigation ---------------------------------------------------------
 
     def to_title(self):
-        """Boot to the Lab menu, which lives on the title screen's state.
-
-        The copyright screen is skipped and the 1P/2P screen is the menu now;
-        see docs/decisions/0007. On the stock ROM this still reaches the real
-        title screen, which is what the comparison tests want.
-        """
+        """Boot to the title screen. The copyright screen is skipped on the Lab
+        ROM and not on the stock one; both end up here."""
         self.run_until_state(GS_TITLE_SCREEN_MAIN)
 
     def to_menu(self):
+        """The Lab menu, which is one press past the title screen: 1 PLAYER.
+
+        On the stock ROM the same press reaches the A-TYPE/B-TYPE screen, which
+        is the state the Lab menu runs on - so this works for both.
+        """
         self.to_title()
+        self.tick(20)
+        self.press("start")
+        self.run_until_state(GS_GAME_TYPE_MAIN)
         self.tick(20)
         return self
 
@@ -148,20 +152,21 @@ class Tetris:
         `hearts` presses Select once there, which is how the Lab arms hard mode
         (the original's hidden Down+Start lived on the screen the menu replaced).
         """
-        self.to_menu()
+        self.to_title()
+        self.tick(20)
         if hearts and not self.is_lab:
-            self.hold("down")                     # the original's hidden combo
+            # The original arms hard mode with a hidden Down+Start at the title
+            # screen, two screens before the level menu - so it has to be held
+            # on the way past, not later.
+            self.hold("down")
             self.press("start")
             self.release("down")
         else:
-            self.press("start")                   # TETRIS is the first row
-        # The stock ROM still has the A-TYPE/B-TYPE screen in between.
-        self.run_until(lambda: self.state in (GS_A_TYPE_SELECTION_MAIN,
-                                              GS_GAME_TYPE_MAIN),
-                       what="a level select or the game type screen")
-        if self.state == GS_GAME_TYPE_MAIN:
-            self.press("start")
-            self.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+            self.press("start")                   # 1 PLAYER, or past the title
+        self.run_until_state(GS_GAME_TYPE_MAIN)
+        self.tick(20)
+        self.press("start")                       # TETRIS, or A-TYPE
+        self.run_until_state(GS_A_TYPE_SELECTION_MAIN)
         self.tick(20)             # the picker defers its first paint a frame
         if hearts and self.is_lab:
             self.press("select")

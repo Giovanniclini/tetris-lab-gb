@@ -18,10 +18,19 @@ GFX = {
     "ascii.1bpp": ("gfx/1bpp/ascii.png", ["-d", "1"], 312),
 }
 
+# Lab graphics, converted the same way. Kept separate because src/original/ is
+# vendored: nothing here may change a byte of the LAB=0 build.
+LAB_GFX = {
+    "labTitleScreen.2bpp": ("../lab/gfx/2bpp/labTitleScreen.png", [], 2048),
+}
 
-def build(rgbgfx: Path, src_dir: Path, out_dir: Path) -> None:
+
+def build(rgbgfx: Path, src_dir: Path, out_dir: Path, lab: bool = True) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    for name, (png, args, expected) in GFX.items():
+    todo = dict(GFX)
+    if lab:
+        todo.update({k: (v[0], v[1], v[2]) for k, v in LAB_GFX.items()})
+    for name, (png, args, expected) in todo.items():
         out = out_dir / name
         src = src_dir / png
         if not src.exists():

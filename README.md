@@ -93,6 +93,8 @@ Game Boy Color*** or the screen is greyscale — see [below](#known-quirk-greysc
 
 | Where | Press | Does |
 | --- | --- | --- |
+| Title screen | `Left` / `Right` | 1 PLAYER or 2 PLAYER |
+| Title screen | `Start` or `A` | confirm |
 | Lab menu | `Up` / `Down` | move between rows |
 | Lab menu | `Left` / `Right` | change the value on the row |
 | Lab menu | `Start` or `A` | launch the mode |
@@ -103,14 +105,18 @@ Game Boy Color*** or the screen is greyscale — see [below](#known-quirk-greysc
 
 ## Trainers
 
+![Title screen](./assets/screens/title.png)
 ![The Lab menu](./assets/screens/menu.png)
+
+Boot reaches the title screen in about a second — the copyright screen is skipped. The artwork is
+**Tolstoj's**, drawn in [TREP](https://tolstoj-82.github.io/apps/trep/) against the metadata this
+build publishes. `1 PLAYER` goes to the Lab menu; `2 PLAYER` is the link-cable game, and lives
+here because the original's serial code only pairs two Game Boys from this screen.
 
 The A-TYPE/B-TYPE screen is the Lab menu, modelled on
 [TetrisGYM's](https://github.com/kirjavascript/TetrisGYM): one list, playable modes first,
 settings after, each row carrying its own value. `Up`/`Down` move, `Left`/`Right` change the
 value on the row, `Start` launches.
-
-Boot lands here in about a second — the copyright screen is skipped.
 
 ### Tetris
 
@@ -289,8 +295,9 @@ Nintendo, The Tetris Company or any rights holder.
   two ROMs would deal the same pieces rather than each inventing its own. Also for the recorded
   piece sequences in `tests/vectors/toni-seeds.txt`: four seeds and the pieces each deals, dumped
   from BGB, which are what prove ours matches his.
-* **Tolstoj**, for the reverse-engineering conversations, for the standing offer to hand off KLM
-  hosting, and for reporting the SPS reset bug that our own tests could not see
+* **Tolstoj**, for the **title screen — his artwork, his design**, and for TREP, the editor that
+  made it possible to make one; for the reverse-engineering conversations, the standing offer to
+  hand off KLM hosting, and for reporting the SPS reset bug that our own tests could not see
   (`docs/existing-hacks.md`)
 * [kirjavascript/TetrisGYM](https://github.com/kirjavascript/TetrisGYM) — the model for this project,
   and the proof the approach works

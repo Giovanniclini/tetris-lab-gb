@@ -17,10 +17,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from tools.emu import Tetris                        # noqa: E402
+from tools.emu import Tetris, GS_IN_GAME_MAIN       # noqa: E402
 from tools.pieces import sequence, name             # noqa: E402
 from tools.lfsr import stream                       # noqa: E402
-from test_sps import arm, hHiddenLoadedPiece        # noqa: E402
+from test_sps import (hHiddenLoadedPiece, wLabSeedHi,  # noqa: E402
+                      wLabSeedMid, wLabSeedLo)
 
 ROM = "build/tetrislab.gb"
 SEEDS = (0x11998F, 0x27D844, 0xC0E3C6)
@@ -33,11 +34,26 @@ def predicted(seed, count):
 
 def observed(seed, frames=6000):
     """What the ROM actually deals. Sampling per frame cannot see a repeat, so
-    the model is squashed the same way before comparing."""
+    the model is squashed the same way before comparing.
+
+    The seed is armed and then the game is restarted, because a piece is always
+    already in flight when the seed lands and it was drawn before it. Restarting
+    re-arms the seed at the game init and starts the sequence from its first
+    piece, so what is sampled is the seeded stream and nothing else.
+    """
     with Tetris(ROM) as t:
         t.start_game_at(9)
         t.tick(30)
-        arm(t, seed)
+        t.pb.memory[wLabSeedHi] = (seed >> 16) & 0xFF
+        t.pb.memory[wLabSeedMid] = (seed >> 8) & 0xFF
+        t.pb.memory[wLabSeedLo] = seed & 0xFF
+        for b in ("a", "b", "select", "start"):
+            t.pb.button_press(b)
+        t.tick(4)
+        for b in ("a", "b", "select", "start"):
+            t.pb.button_release(b)
+        t.run_until_state(GS_IN_GAME_MAIN)
+        t.tick(4)
         seen, last = [], t[hHiddenLoadedPiece]
         for _ in range(frames):
             t.tick(1)

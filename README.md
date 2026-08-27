@@ -138,6 +138,10 @@ light backing, so the box reads one cell wider rather than broken, and gets its 
 moment the score drops under ten million. Eight digits is all the panel has room for: the next
 cell along is inside the playfield.
 
+Only a plain `TETRIS` game is filed. A drill is not a run — `TRANSITION` hands you its preset on
+the first frame, and `CRUNCH` is a different game on a narrower board — so the table for a level
+means one thing: a real game at that level.
+
 High score entries carry both digits too, in the dotted gap the original leaves between the name
 and the score, and they are ranked by them — otherwise a 1 000 050 stored as its low six digits
 would lose to a 999 999.

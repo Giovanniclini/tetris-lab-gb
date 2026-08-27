@@ -182,15 +182,60 @@ def test_the_millions_do_not_survive_a_change_of_level():
         )
 
 
+def test_a_drill_does_not_file_a_high_score():
+    """TRANSITION hands you its preset on the first frame, so filing it puts a
+    score in the level's table that nobody played - 1,500,000 at the top of
+    level 9 for a game that lasted one piece. CRUNCH is a different game on a
+    narrower board, whose scores are not the same quantity.
+
+    Same reasoning as ADR 0005, where the instant restart abandons a half-typed
+    name: drilling is not a run.
+    """
+    from tools.emu import GS_IN_GAME_MAIN, GS_A_TYPE_SELECTION_MAIN
+    MODE_TETRIS, MODE_TRANSITION, MODE_CRUNCH = 0, 2, 3
+
+    def play(mode, rights=0):
+        with Tetris(ROM) as t:
+            t.to_menu()
+            for _ in range(mode):
+                t.press("down")
+            for _ in range(rights):
+                t.press("right")
+            t.press("start")
+            t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+            t.tick(20)
+            t.pb.memory[hATypeLevel] = LEVEL
+            t.press("start")
+            t.run_until_state(GS_IN_GAME_MAIN)
+            t.tick(90)
+            for i, b in enumerate(bcd(50000)):
+                t.pb.memory[wScoreBCD + i] = b
+            t.pb.memory[0xFFE1] = 0x0D            # end the game
+            for _ in range(400):
+                t.tick(1)
+                if t.state == 0x04:
+                    break
+            t.press("start")
+            t.tick(200)
+            return entries(t)
+
+    assert play(MODE_TRANSITION, rights=15) == [0, 0, 0], "TRANSITION filed a drill"
+    assert play(MODE_CRUNCH, rights=10) == [0, 0, 0], "CRUNCH filed a drill"
+    assert play(MODE_TETRIS)[0] == 50000, "TETRIS should still file"
+
+
 def test_a_trainer_gets_the_uncap_without_asking_for_it():
     """The uncap sits on the shared score path, not on any mode, so a trainer
     inherits it by launching as an A-type game and does nothing else.
 
     The carry hooks AddScoreValueDEontoBaseScoreHL, which every score add goes
     through, and keys on the address wScoreBCD+2 rather than the game type. The
-    display and the filing gate on hGameType, which trainers set to A-type. If a
-    future trainer ever has to register itself with the uncap, this test is
-    where that shows up.
+    display gates on hGameType, which trainers set to A-type. If a future trainer
+    ever has to register itself with the uncap, this test is where that shows up.
+
+    Filing is deliberately not shared - a drill does not go in the table, see
+    test_a_drill_does_not_file_a_high_score - so this compares what is on screen
+    during the game and nothing downstream of it.
     """
     sys.path.insert(0, str(ROOT / "tests"))
     from test_labmenu import to_menu_row
@@ -210,22 +255,14 @@ def test_a_trainer_gets_the_uncap_without_asking_for_it():
                 t.pb.memory[wScoreBCD + i] = byte
             t.pb.memory[wLabScoreMillions] = 1   # 1 000 257
             t.tick(60)
-            level = t[hATypeLevel]
-            panel = [t[0x9800 + 3 * 32 + c] for c in range(13, 20)]
-            t.pb.memory[0xFFE1] = GS_A_TYPE_SELECTION_INIT
-            t.tick(120)
-            results[name] = (panel, entries(t, level)[0],
-                             [t[ROW_VRAM + SEVENTH + i] for i in range(7)])
+            results[name] = [t[0x9800 + 3 * 32 + c] for c in range(13, 20)]
 
     assert results["TRANSITION"] == results["TETRIS"], (
-        f"the trainer differs from a plain game:\n"
+        f"the trainer's score panel differs from a plain game's:\n"
         f"  TETRIS     {results['TETRIS']}\n"
         f"  TRANSITION {results['TRANSITION']}"
     )
-    panel, filed, shown = results["TRANSITION"]
-    assert panel == [1, 0, 0, 0, 2, 5, 7], panel
-    assert filed == 1000257, filed
-    assert shown == [1, 0, 0, 0, 2, 5, 7], shown
+    assert results["TRANSITION"] == [1, 0, 0, 0, 2, 5, 7], results["TRANSITION"]
 
 
 TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]

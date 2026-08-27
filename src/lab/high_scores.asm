@@ -59,6 +59,18 @@ LabUpdateHighScores::
 ; ---------------------------------------------------------------------------
 
 LabFileHighScore::
+; A drill is not a run. TRANSITION hands you its preset on the first frame, so
+; filing it puts a score in the level's table that nobody played - and CRUNCH is
+; a different game on a narrower board, whose scores are not the same quantity.
+; Same reasoning as ADR 0005, where the instant restart abandons a half-typed
+; name: when you are drilling you want another go, not a leaderboard entry.
+;
+; The score is zeroed on the way out, exactly as the did-not-place path does,
+; so the original's own call a moment later has nothing to file either.
+	ld   a, [wLabMode]
+	cp   MODE_TETRIS
+	jr   nz, .notARun
+
 	ldh  a, [hATypeLevel]
 	call LabHiScoreSlot
 	ld   a, d
@@ -82,6 +94,8 @@ LabFileHighScore::
 
 ; Did not place. Leave the original's own call nothing to disagree with.
 	pop  hl
+
+.notARun:
 	xor  a
 	ld   [wScoreBCD], a
 	ld   [wScoreBCD + 1], a

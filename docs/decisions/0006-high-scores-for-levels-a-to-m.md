@@ -27,10 +27,30 @@ The clamp stays, but the score is filed before it: `LabLevelSelectInit` calls
 was played. That routine clears `wScoreBCD` on its way out, so the original's
 own call a moment later finds a zero score and cannot file it twice.
 
+## Only a plain game is filed
+
+A trainer's score does not go in the table. `TRANSITION` hands you its preset on
+the first frame, so filing it puts a number in the level's table that nobody
+played — 1 500 000 at the top of level 9 for a game that lasted one piece — and
+`CRUNCH` is a different game on a narrower board, whose scores are not the same
+quantity as a full one's.
+
+This is ADR 0005's reasoning applied one screen later: the instant restart
+already abandons a half-typed name, because when you are drilling you want
+another go rather than a leaderboard entry.
+
+`LabFileHighScore` returns early unless the mode is `TETRIS`, zeroing the score
+on the way out exactly as the did-not-place path does — otherwise the original's
+own call a moment later would file it instead, six digits of it.
+
 ## Consequences
 
 * **A–M keep their own scores and names**, and an unplayed level shows the
   original's dotted placeholder because a zeroed slot already renders that way.
+* **A per-level table means one thing: a real game at that level.** Per-mode
+  tables were the alternative and cost 23 levels x 3 entries each; nobody has
+  asked for a crunch leaderboard, and a single best-per-width would be the
+  cheaper shape if they ever do.
 * **`$D762–$D8C0` was never really free.** It was reachable from unmodified
   original code the moment a level above the grid existed. Levels 15 and 16
   landed on `$D800`, which is where Lab state used to start.

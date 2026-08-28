@@ -216,6 +216,34 @@ LabShowGridCursor::
 ; whichever field has focus while the blink phase is off. Ten tilemap writes at
 ; most, so it simply waits for VBlank - the original does the same in
 ; HandleLockdownTransferToTilemap.
+; The high score name is typed on the level select's own screen, and that
+; screen is the original's - it knows nothing about the field beside the grid.
+; So while you type, the level you just played is nowhere on it, and the grid
+; cursor sits on the 9 that hATypeLevel was clamped to: the screen says you
+; played level 9 whatever you actually played.
+;
+; Steady rather than blinking. The blink means "this field has focus", and while
+; a name is being typed the focus is the name.
+;
+; The grid cursor has to go with it, for the same reason it does on the level
+; select itself: it is a sprite that draws the character for hATypeLevel, and
+; hATypeLevel was clamped into the grid on the way here. Left alone it sits on
+; the 9 while the picker says C, and the screen offers two answers to which
+; level this was.
+LabPaintPickerSteady::
+	ld   a, [wLabPickerLevel]
+	ld   hl, PICKER_CELL
+	call LabPutTile
+
+	ld   a, [wLabFocus]
+	and  a
+	ret  z                          ; the grid really is the answer: leave it
+
+	ld   a, SPRITE_SPEC_HIDDEN
+	ld   [wSpriteSpecs + SPR_SPEC_Hidden], a
+	jp   Copy2SpriteSpecsToShadowOam
+
+
 LabPaintFields::
 .waitVBlank:
 	ldh  a, [rLY]

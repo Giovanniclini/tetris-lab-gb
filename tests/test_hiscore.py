@@ -182,6 +182,48 @@ def test_the_millions_do_not_survive_a_change_of_level():
         )
 
 
+def test_the_level_you_played_is_on_screen_while_you_type_your_name():
+    """Reported by Giovanni: while typing a high score name, the picker was not
+    there and the grid read 9 whatever you had played.
+
+    The name is typed on the level select's own screen, but by the original's
+    handler - which knows nothing about the field beside the grid. And
+    hATypeLevel has been clamped into the grid by then, so the cursor sits on 9.
+    Between them the screen said "level 9" for every A-M game.
+    """
+    from tools.emu import GS_IN_GAME_MAIN
+    PICKER_CELL = 0x9800 + 6 * 32 + 16
+    SPRITE_HIDDEN = 0xC200                      # wSpriteSpecs + SPR_SPEC_Hidden (offset 0)
+
+    def to_name_entry(level):
+        t = Tetris(ROM)
+        t.start_game_at(level)
+        t.tick(60)
+        for i, b in enumerate(bcd(5000)):
+            t.pb.memory[wScoreBCD + i] = b
+        t.pb.memory[0xFFE1] = 0x0D              # game over
+        t.run_until(lambda: t.state == 0x04, what="the game over screen")
+        t.press("start")
+        t.run_until(lambda: t.state == 0x15, what="the name entry")
+        t.tick(30)
+        return t
+
+    # a level above the grid: the picker carries the answer, the cursor must go
+    for level, tile in ((10, 0x0A), (12, 0x0C), (22, 0x16)):
+        with to_name_entry(level) as t:
+            assert t[PICKER_CELL] == tile, (
+                f"level {level}: picker shows ${t[PICKER_CELL]:02X}, wanted ${tile:02X}"
+            )
+            assert t[SPRITE_HIDDEN], (
+                f"level {level}: the grid cursor is still on screen, parked on the "
+                f"9 that hATypeLevel was clamped to"
+            )
+
+    # a level on the grid: the cursor is the answer, so it stays
+    with to_name_entry(5) as t:
+        assert not t[SPRITE_HIDDEN], "the grid cursor was hidden for a grid level"
+
+
 def test_a_trainer_gets_the_uncap_without_asking_for_it():
     """The uncap sits on the shared score path, not on any mode, so a trainer
     inherits it by launching as an A-type game and does nothing else.

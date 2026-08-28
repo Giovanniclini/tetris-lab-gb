@@ -6,6 +6,76 @@
 ; first - see docs/decisions/0005.
 ; --------------------------------------------------------------------------
 
+; --------------------------------------------------------------------------
+; Quit to the level select
+;
+; B while paused. Changing level used to mean topping out on purpose, which is
+; the wrong shape for a trainer - the loop is "try it, move the level, try it
+; again". A+B+Select+Start keeps its own job, so the pair reads as "again"
+; against "somewhere else".
+;
+; B is the button because it already means back here: it is how you leave the
+; level select for the menu (ADR 0007). And while paused it is genuinely free -
+; the game reads only the reset combination, Start to unpause, and Select, which
+; hides the next piece ($1BF4). There is no free button during play.
+; --------------------------------------------------------------------------
+
+LabQuitToLevelSelect::
+	ldh  a, [hGamePaused]
+	and  a
+	ret  z                          ; only from the pause screen
+
+; Link play is not ours to leave. Quitting one side strands the other mid-game
+; exactly as restarting it would, which is why ADR 0005 reboots there instead.
+	ldh  a, [hIs2Player]
+	and  a
+	ret  nz
+
+	ldh  a, [hButtonsPressed]
+	bit  PADB_B, a
+	ret  z
+
+; B is also one quarter of the restart combination, so a restart pressed while
+; paused arrives here first and would leave for the level select - which then
+; reboots, because the combination is still held and menus reboot (ADR 0005).
+; Decline while all four are down and let the restart have it.
+	call LabResetComboHeld
+	ret  z
+
+; Unpause on the way out, and tell the sound engine so. Pausing sets
+; wGamePausedActivity to 1 to stop the music ($1C34) and unpausing sets 2 to
+; resume it ($1C5E); the level select never starts the music itself, so leaving
+; without the resume signal is a silent menu. Same trap the instant restart hit.
+	xor  a
+	ldh  [hGamePaused], a
+	ld   a, $02
+	ld   [wGamePausedActivity], a
+
+; Abandon the score rather than filing a game you walked out of - the same call
+; ADR 0005 makes for the half-typed name. Zeroed here, so the level select's own
+; filing finds nothing whichever mode was being played.
+	xor  a
+	ld   [wScoreBCD], a
+	ld   [wScoreBCD + 1], a
+	ld   [wScoreBCD + 2], a
+	ld   [wLabScoreMillions], a
+	ldh  [hMustEnterHighScore], a
+
+; Back to the level select this game came from. B-type has its own, and sending
+; a B-type game to the A-type screen would hand it the wrong level and the wrong
+; screen. TRANSITION and CRUNCH are A-type games, so they land where TETRIS
+; does - and wLabMode still holds the drill, so it is still selected when you
+; start again.
+	ldh  a, [hGameType]
+	cp   GAME_TYPE_B_TYPE
+	ld   a, GS_B_TYPE_SELECTION_INIT
+	jr   z, .go
+	ld   a, GS_A_TYPE_SELECTION_INIT
+.go:
+	ldh  [hGameState], a
+	ret
+
+
 ; Z is set when the soft-reset combination is held.
 LabResetComboHeld::
 	ldh  a, [hButtonsHeld]

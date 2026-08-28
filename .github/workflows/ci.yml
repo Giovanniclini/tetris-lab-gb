@@ -68,6 +68,7 @@ jobs:
           python3 tests/test_lfsr_vectors.py
           python3 tests/test_trep.py
           python3 tests/test_crunch.py
+          python3 tests/test_quit.py
 
       # Patches only, never ROM data. See docs/research.md section 7.
       - name: Assert no ROM data is tracked

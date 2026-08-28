@@ -102,6 +102,7 @@ Game Boy Color*** or the screen is greyscale — see [below](#known-quirk-greysc
 | Level picker | `Up` / `Down` | choose `0`–`9` then `A`–`M` |
 | Level select | `Select` | toggle hearts |
 | Any time in a game | `A`+`B`+`Select`+`Start` | restart the same drill |
+| Paused | `B` | back to the level select |
 
 ## Trainers
 
@@ -214,6 +215,11 @@ what is verified is that the bytes on the wire are the original's, that the ping
 that the fallbacks behave. See [`docs/decisions/0007`](docs/decisions/0007-lab-menu-mirrors-tetrisgym.md).
 
 ### Instant restart
+
+**`Start` then `B` leaves for the level select**, so changing level does not mean topping out on
+purpose. The score is abandoned rather than filed — walking out of a game is not a run. B-Type
+goes back to its own level select; link play cannot be abandoned this way, because quitting one
+side strands the other.
 
 `A`+`B`+`Select`+`Start` restarts the current drill in about 0.15 s, instead of rebooting through
 fifteen seconds of logos and menus. It works during a game, on the game-over screen, and while

@@ -236,6 +236,7 @@ LabDispatch::
 ; init has run belongs here: that init clears the line count and the score, so
 ; setting them beforehand achieves nothing.
 .inGameMain:
+	call LabQuitToLevelSelect
 	call LabDrillApply
 	call LabCrunchApply
 	call LabCrunchFill

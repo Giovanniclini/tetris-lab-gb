@@ -87,6 +87,7 @@ python3 -m venv .venv
 .venv/bin/python tests/test_lfsr_vectors.py
 .venv/bin/python tests/test_trep.py
 .venv/bin/python tests/test_crunch.py
+.venv/bin/python tests/test_quit.py
 ```
 
 ### Editing the graphics

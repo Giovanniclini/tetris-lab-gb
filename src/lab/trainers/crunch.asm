@@ -104,6 +104,82 @@ LabCrunchApply::
 	ld   a, [wLabCrunch]
 	and  a
 	ret  z
-	ld   a, ROWS_SHIFTING_DOWN_ROW_START
-	ldh  [hRowsShiftingDownState], a
+	ld   a, GAME_SCREEN_ROWS
+	ld   [wLabCrunchRowsToSend], a
+	ret
+
+
+; The buffer is the game's collision map; this is the same columns on the screen.
+;
+; Not by setting hRowsShiftingDownState, which is what the original's own
+; FillGameScreenBufferWithTileAandSetToVramTransfer does. That is the row-shift
+; state machine, and borrowing it while a piece is live costs three things: the
+; piece freezes for as long as the walk takes ($208D and $20BA both return early
+; while it runs), the walls visibly grow a row at a time, and finishing it looks
+; to the game like a completed line clear - so it spawns the next piece over the
+; one you were holding. TetrisGYM never meets this because advanceGameCrunch
+; runs at game init, before any piece exists.
+;
+; So the rows go up a few at a time, on our own counter, the way CLAUDE.md 11
+; asks Lab rendering to work: a queue with a per-frame budget. Three rows a
+; frame puts every column on screen inside a tenth of a second.
+DEF CRUNCH_ROWS_PER_FRAME EQU 3
+
+LabCrunchSendRows::
+	ld   a, [wLabCrunchRowsToSend]
+	and  a
+	ret  z
+
+	ld   c, CRUNCH_ROWS_PER_FRAME
+.nextRow:
+	ld   a, [wLabCrunchRowsToSend]
+	and  a
+	ret  z
+	dec  a
+	ld   [wLabCrunchRowsToSend], a
+
+; row a of the playfield, in both the buffer and screen 0
+	ld   h, 0
+	ld   l, a
+	add  hl, hl
+	add  hl, hl
+	add  hl, hl
+	add  hl, hl
+	add  hl, hl                     ; * GB_TILE_WIDTH
+	push hl
+	ld   de, _SCRN0 + 2
+	add  hl, de
+	push hl
+	ld   a, [wLabCrunch]
+	rrca
+	rrca
+	and  $03
+	jr   z, .rightSide
+	ld   b, a
+.leftLoop:
+	ld   a, TILE_SOLID_BLOCK
+	call LabPutTile
+	inc  hl
+	dec  b
+	jr   nz, .leftLoop
+
+.rightSide:
+	pop  hl
+	ld   a, [wLabCrunch]
+	and  $03
+	jr   z, .rowSent
+	ld   b, a
+	ld   de, GAME_SQUARE_WIDTH - 1
+	add  hl, de
+.rightLoop:
+	ld   a, TILE_SOLID_BLOCK
+	call LabPutTile
+	dec  hl
+	dec  b
+	jr   nz, .rightLoop
+
+.rowSent:
+	pop  hl
+	dec  c
+	jr   nz, .nextRow
 	ret

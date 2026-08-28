@@ -275,6 +275,74 @@ def test_seed_can_be_entered_from_the_menu():
         assert t[hLabSpsEnabled] != 0, "a non-zero seed should arm SPS"
 
 
+def test_every_mode_deals_the_same_sequence_for_a_seed():
+    """A seed has to mean one sequence, whatever you are playing.
+
+    That is the whole point of SPS: two people race the same pieces, and it is
+    worthless if TETRIS and CRUNCH disagree. It holds because the seed is armed
+    at the game init every mode passes through, and because no trainer draws
+    from the generator - the transition trainer sets counters, crunch writes the
+    collision buffer, neither takes a piece.
+
+    Nothing enforces that, which is why this test exists. A future trainer that
+    spawns or consumes a piece would desync the modes silently, and a seeded
+    sequence that is only right in one mode is worse than no seed at all.
+    """
+    from tools.emu import GS_A_TYPE_SELECTION_MAIN, hATypeLevel
+    hCurrPiece = 0xFF92
+    MODES = {"TETRIS": 0, "TRANSITION": 2, "CRUNCH": 3}
+    SEED = 0x11998F
+
+    def played(row, frames=3000):
+        with Tetris(ROM) as t:
+            t.to_menu()
+            for _ in range(row):
+                t.press("down")
+            for _ in range(5):                       # give the row a value
+                t.press("right")
+            t.pb.memory[wLabSeedHi] = (SEED >> 16) & 0xFF
+            t.pb.memory[wLabSeedMid] = (SEED >> 8) & 0xFF
+            t.pb.memory[wLabSeedLo] = SEED & 0xFF
+            t.press("start")
+            t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+            t.tick(20)
+            t.pb.memory[hATypeLevel] = 9
+            t.press("start")
+            t.run_until_state(GS_IN_GAME_MAIN)
+            seen, last = [], None
+            for _ in range(frames):
+                t.tick(1)
+                v = t[hCurrPiece]
+                if v and v != last:
+                    seen.append(v)
+                    last = v
+            return seen
+
+    MINIMUM = 5
+
+    base = played(MODES["TETRIS"])
+    assert len(base) >= MINIMUM, (
+        f"only saw {len(base)} pieces in TETRIS; the sample is too short to mean anything"
+    )
+    for name_, row in MODES.items():
+        if name_ == "TETRIS":
+            continue
+        other = played(row)
+        # Both sides have to deal a real game. Comparing min(len) alone passes
+        # when a mode is broken enough to deal nothing, which is the failure
+        # this test is most likely to meet.
+        assert len(other) >= MINIMUM, (
+            f"{name_} only dealt {len(other)} pieces - it is not playing, "
+            f"so nothing here was compared"
+        )
+        n = min(len(base), len(other))
+        assert base[:n] == other[:n], (
+            f"{name_} deals a different sequence from TETRIS on the same seed:\n"
+            f"  TETRIS {[hex(v) for v in base[:n]]}\n"
+            f"  {name_} {[hex(v) for v in other[:n]]}"
+        )
+
+
 TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
 
 if __name__ == "__main__":

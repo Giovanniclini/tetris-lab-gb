@@ -108,6 +108,7 @@ wLabSeedDigit::   db        ; 0-5 while editing the seed row, else SEED_IDLE
 wLabCrunch::      db        ; CRUNCH's width, TetrisGYM's own value: every 4 is
                            ; a column off the left, every 1 off the right
 wLabCrunchPending:: db     ; set at game init, consumed on the first game frame
+wLabCrunchRowsToSend:: db  ; rows of the crunch columns still to reach the screen
 
 ; The controller as the player actually held it, before LabSuppressPushdown
 ; edits it. Anything that wants to *show* the input - toni asked for an input

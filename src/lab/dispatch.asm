@@ -239,6 +239,7 @@ LabDispatch::
 	call LabDrillApply
 	call LabCrunchApply
 	call LabCrunchFill
+	call LabCrunchSendRows
 	call LabSuppressPushdown
 	call LabDrawScoreCarry
 	ld   hl, GameState00_InGameMain

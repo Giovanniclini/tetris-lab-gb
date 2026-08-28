@@ -26,7 +26,7 @@ wLabCrunch = sym("wLabCrunch")
 MODE_TETRIS, MODE_CRUNCH = 0, 3
 
 
-def start(value, mode=MODE_CRUNCH):
+def start(value, mode=MODE_CRUNCH, ticks=90):
     """A game running, with CRUNCH set to `value`."""
     t = Tetris(ROM)
     t.to_menu()
@@ -38,7 +38,7 @@ def start(value, mode=MODE_CRUNCH):
     t.tick(20)
     t.press("start")
     t.run_until_state(GS_IN_GAME_MAIN)
-    t.tick(90)
+    t.tick(ticks)
     return t
 
 
@@ -119,6 +119,46 @@ def test_the_columns_survive_a_line_clear():
             assert got == "##......##", (
                 f"row {row} lost its crunch columns after a clear: {got}"
             )
+
+
+def test_arming_crunch_does_not_disturb_the_piece_you_have():
+    """Reported by Giovanni: the walls grew a row at a time and, when they
+    finished, the falling piece turned into a different one.
+
+    The cause was borrowing hRowsShiftingDownState to push the buffer to VRAM,
+    which is what the original's own FillGameScreenBufferWithTileAandSetToVramTransfer
+    does. That is the row-shift state machine: while it runs the piece is frozen
+    ($208D and $20BA both return early), and finishing it looks to the game like
+    a completed line clear, so it spawns the next piece over yours.
+
+    So: the shift state is never set, and the piece keeps its identity.
+
+    Sampling starts on the first gameplay frame - the whole event is over
+    within twenty, so a helper that settles the game first sees nothing and
+    passes against the very code it is here to reject.
+    """
+    SHIFT, SPRITE_TILE, SPRITE_Y = 0xFFE3, 0xC203, 0xC201
+
+    with start(0x0A, ticks=0) as t:
+        tile, y = t[SPRITE_TILE], t[SPRITE_Y]
+        for _ in range(40):
+            t.tick(1)
+            assert t[SHIFT] == 0, "the row-shift machinery is being borrowed again"
+            assert t[SPRITE_TILE] == tile, (
+                f"the piece changed under the player: ${tile:02X} -> ${t[SPRITE_TILE]:02X}"
+            )
+        t.tick(120)
+        assert t[SPRITE_Y] != y, "the piece never fell"
+
+
+def test_the_columns_reach_the_screen_promptly():
+    """A queue with a per-frame budget, so no single frame carries all of it -
+    but it has to finish fast enough not to read as the board changing shape
+    under you. Three rows a frame is every column inside a tenth of a second.
+    """
+    with start(0x0A, ticks=8) as t:
+        on_screen = sum(1 for row in range(18) if shape(t, row) == "##......##")
+        assert on_screen == 18, f"only {on_screen}/18 rows are on screen after 8 frames"
 
 
 def test_crunch_does_nothing_in_other_modes():

@@ -117,6 +117,7 @@ LabDispatch::
 
 .runNameEntry:
 	call LabRedrawHiScoreMillions   ; the score is on screen while the name is typed
+	call LabPaintPickerSteady       ; and so is the level it was played at
 	ld   hl, GameState15_EnteringHighScore
 	ret
 

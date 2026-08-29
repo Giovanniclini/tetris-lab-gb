@@ -106,3 +106,9 @@ picker needs none of them.
   *downward* and makes the game slower. Changing the formula would alter normal
   heart games, so the option is withheld instead. See
   `docs/existing-hacks.md` 3.2b.
+* **Name entry runs on the screen the game was played on, and B-type has its
+  own.** State `$15` reuses whichever level select the game came from, and the
+  Lab draws on the A-type one only. B-type's layout puts its difficulty grid
+  where our cells are, so painting there unconditionally wrote a nought into
+  it - and the original never repaints that cell, so it stayed for the rest of
+  the screen. Anything the Lab paints at `$15` has to check `hGameType` first.

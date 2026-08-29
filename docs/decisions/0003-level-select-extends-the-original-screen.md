@@ -18,7 +18,7 @@ movement - and add fields in the blank strip to its right. Columns 15-18, rows
 
 ```
         cols 15-18
-   row  6      .  L  .  .      level, 0-9 then A-M
+   row  6      .  L  .  .      level, A-M
    row  9      S  E  E  D
    row 10      A  C  E  1      seed, four hex digits
 ```
@@ -31,6 +31,10 @@ Right walk the chain; Up and Down change the value under the cursor.**
 * **Left** leaves the level field for grid cell 9, from any level.
 * **Select** toggles hearts, with a heart drawn beside `LEVEL`. The original
   never tests Select on this screen.
+* **The picker offers `A`-`M` and nothing else.** The grid already offers `0`-`9`,
+  and a level in both fields is one you can select in two places, with the
+  cursor in one of them saying something different from the other. `Left`
+  remains the way out of the field, from any level.
 * The picker cell's tile is simply the level number: the font puts `0-9` at
   `$00-$09` and `A-M` at `$0A-$16`, so `tile == level` throughout.
 

@@ -99,7 +99,7 @@ Game Boy Color*** or the screen is greyscale — see [below](#known-quirk-greysc
 | Lab menu | `Left` / `Right` | change the value on the row |
 | Lab menu | `Start` or `A` | launch the mode |
 | Level select, grid cell `9` | `Right` | into the level picker |
-| Level picker | `Up` / `Down` | choose `0`–`9` then `A`–`M` |
+| Level picker | `Up` / `Down` | choose `A`–`M` |
 | Level select | `Select` | toggle hearts |
 | Any time in a game | `A`+`B`+`Select`+`Start` | restart the same drill |
 | Paused | `B` | back to the level select |

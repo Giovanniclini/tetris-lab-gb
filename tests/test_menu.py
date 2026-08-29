@@ -24,6 +24,7 @@ HISCORE_SIZEOF = 27                             # src/original/include/structs.s
 
 wLabFocus = sym("wLabFocus")
 wLabPickerLevel = sym("wLabPickerLevel")
+PICKER_FIRST = 10        # A - the grid covers 0-9
 FOCUS_GRID, FOCUS_LEVEL = 0, 1
 
 GRID_CELLS = ([0x9800 + 6 * 32 + 5 + 2 * i for i in range(5)]
@@ -95,8 +96,11 @@ def test_picker_opens_and_closes_from_the_grid():
 
 
 def test_picker_clamps_at_both_ends():
-    """Up and Down change the level and stop at M and 0 - 0 is a level, not the
-    way out of the field."""
+    """Up and Down stop at M and at A. The grid already offers 0-9, so the
+    picker starts where the grid stops - a level belongs to one field or the
+    other, never both. Down at A is not the way out of the field either; Left
+    is, from any level.
+    """
     with Tetris(ROM) as t:
         open_picker(t)
         for _ in range(30):
@@ -104,8 +108,10 @@ def test_picker_clamps_at_both_ends():
         assert t[wLabPickerLevel] == MAX_LEVEL, "should stop at M"
         for _ in range(30):
             t.press("down")
-        assert t[wLabPickerLevel] == 0, "should stop at 0"
-        assert t[wLabFocus] == FOCUS_LEVEL, "Down at 0 should not leave the field"
+        assert t[wLabPickerLevel] == PICKER_FIRST, (
+            f"should stop at A, got {t[wLabPickerLevel]}"
+        )
+        assert t[wLabFocus] == FOCUS_LEVEL, "Down at A should not leave the field"
 
 
 def test_picker_cell_shows_the_level_character():
@@ -135,13 +141,12 @@ def test_picker_blinks_only_while_it_has_focus():
             seen.add(t[PICKER_CELL])
         assert seen == {12, TILE_BLANK}, f"expected a blink, saw {seen}"
 
-        picker_to(t, 0)
         t.press("left")                       # back to the grid
         seen = set()
         for _ in range(40):
             t.tick(1)
             seen.add(t[PICKER_CELL])
-        assert seen == {0}, f"should be steady once unfocused, saw {seen}"
+        assert seen == {12}, f"should be steady once unfocused, saw {seen}"
 
 
 def test_grid_cursor_is_hidden_while_the_picker_has_focus():
@@ -297,7 +302,12 @@ def test_a_score_is_filed_under_the_level_it_was_played_at():
 def test_high_scores_follow_the_picked_level():
     """The TOP SCORE panel is driven by hATypeLevel, which the Lab keeps as the
     grid index while the level field has focus - so it used to keep showing the
-    grid cursor's scores while you had M selected."""
+    grid cursor's scores while you had M selected.
+
+    Level 5 is reached on the grid and M in the picker, because those are the
+    only places they exist: the picker offers A-M and the grid 0-9, with no
+    overlap between them.
+    """
     PANEL = [0x9800 + r * 32 + c for r in (13, 14, 15) for c in range(3, 17)]
     TILE_DOT = 0x60
 
@@ -331,15 +341,11 @@ def test_high_scores_follow_the_picked_level():
         t.press("right")                                   # level field, at 10
         assert dots(t) == empty, "A has no score yet; expected placeholders"
 
-        while t[wLabPickerLevel] > 5:
-            t.press("down")
-        assert dots(t) == with_score, (
-            "the panel should show level 5's scores when the level field is on 5"
-        )
-
         while t[wLabPickerLevel] < 22:
             t.press("up")
-        assert dots(t) == with_score, "M has its own slot and should show it"
+        assert dots(t) == with_score, (
+            "M has its own slot and the panel should follow the field onto it"
+        )
 
 
 TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]

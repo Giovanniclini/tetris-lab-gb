@@ -26,6 +26,9 @@ LabMenuInput::
 	cp   SEED_IDLE
 	jp   nz, .editingSeed           ; jp: the CRUNCH row put this out of jr range
 
+	bit  PADB_B, c
+	jp   nz, .backToTitle           ; jp: too far for jr from up here
+
 	bit  PADB_START, c
 	jr   nz, .confirm
 	bit  PADB_A, c
@@ -166,6 +169,24 @@ LabMenuInput::
 	ld   a, SEED_IDLE
 	ld   [wLabSeedDigit], a
 	jp   LabMenuSound
+
+
+; B leaves for the title screen, where 1 PLAYER and 2 PLAYER are chosen. Back is
+; what B means everywhere else here: it leaves the level select for this menu,
+; and a paused game for the level select.
+;
+; Reached only when the seed row is closed - while it is open the D-pad and A
+; belong to the digits, and the check above has already jumped away.
+;
+; $06 rather than $07, so the title screen's init runs: it repaints, turns the
+; serial interrupt back on for a link partner to find us, and starts the title
+; music. Arriving straight at $07 would leave the menu on screen.
+.backToTitle:
+	ld   a, SND_MOVING_SELECTION
+	ld   [wSquareSoundToPlay], a
+	ld   a, GS_TITLE_SCREEN_INIT
+	ldh  [hGameState], a
+	ret
 
 
 ; Start on a mode. Each hands over to its type's level select, the way the

@@ -98,6 +98,7 @@ Game Boy Color*** or the screen is greyscale — see [below](#known-quirk-greysc
 | Lab menu | `Up` / `Down` | move between rows |
 | Lab menu | `Left` / `Right` | change the value on the row |
 | Lab menu | `Start` or `A` | launch the mode |
+| Lab menu | `B` | back to the title screen |
 | Level select, grid cell `9` | `Right` | into the level picker |
 | Level picker | `Up` / `Down` | choose `A`–`M` |
 | Level select | `Select` | toggle hearts |

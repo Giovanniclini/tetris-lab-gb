@@ -322,6 +322,55 @@ def test_left_and_right_choose_a_side_rather_than_toggling():
         assert (t[one], t[two]) == (0x9C, 0x32), "the arrow disagrees with the side"
 
 
+def test_b_goes_back_to_the_title_screen():
+    """Back is what B means everywhere else here - it leaves the level select
+    for this menu, and a paused game for the level select. There was no way
+    back to 1 PLAYER / 2 PLAYER short of rebooting.
+    """
+    with Tetris(ROM) as t:
+        to_menu(t)
+        t.press("b")
+        t.run_until(lambda: t.state == 0x07, what="the title screen")
+        assert t[hIs2Player] == 0, "should arrive on 1 PLAYER"
+
+        t.press("start")                       # and back in again
+        t.run_until_state(GS_GAME_TYPE_MAIN)
+        t.tick(20)
+        assert "TETRIS" in "\n".join(text(t, r) for r in range(18))
+
+
+def test_going_back_re_arms_the_link_cable():
+    """Launching a one-player game turns the serial interrupt off ($1444), and
+    the title screen is where a partner finds us - so arriving there with it
+    still off would make 2 PLAYER unreachable until a reboot."""
+    IEF_VBLANK, IEF_SERIAL = 0x01, 0x08
+    with Tetris(ROM) as t:
+        to_menu(t)
+        t.press("b")
+        t.run_until(lambda: t.state == 0x07, what="the title screen")
+        t.tick(20)
+        assert t[0xFFFF] & IEF_SERIAL, (
+            f"serial is off on the title screen (rIE=${t[0xFFFF]:02X})"
+        )
+        assert t[0xFFFF] & IEF_VBLANK, "vblank should still be enabled"
+
+
+def test_b_does_nothing_while_the_seed_row_is_open():
+    """The seed borrows the D-pad and A for its digits; leaving mid-edit would
+    be a press that means two things on the same screen."""
+    wLabSeedDigit = sym("wLabSeedDigit")
+    with Tetris(ROM) as t:
+        to_menu_row(t, MODE_SEED)
+        t.press("a")
+        t.tick(4)
+        assert t[wLabSeedDigit] != 0xFF, "the seed row did not open"
+        t.press("b")
+        t.tick(20)
+        assert t.state == GS_GAME_TYPE_MAIN, (
+            f"B left the menu with the seed row open: ${t.state:02X}"
+        )
+
+
 def test_gameplay_survives_the_replaced_title_init():
     """The falling piece collides against wGameScreenBuffer, and it is the
     title init that puts the walls and floor there. Replacing that init without

@@ -1,7 +1,9 @@
 ; --------------------------------------------------------------------------
 ; The A-type level select
 ;
-; The original's 0-9 grid, extended with a level field for A-M to its right.
+; The original's 0-9 grid, extended with a level field to its right offering the
+; levels the grid cannot: A-M. Two fields, no overlap - a level appears in one
+; place or the other, never both.
 ; Three state handlers - init, main, and a pass after the original's own -
 ; plus the field painting they share.
 ; --------------------------------------------------------------------------
@@ -20,7 +22,7 @@ LabLevelSelectInit::
 
 	ld   a, FOCUS_GRID
 	ld   [wLabFocus], a
-	ld   a, GRID_LAST + 1           ; a sensible first value to offer
+	ld   a, PICKER_FIRST            ; the first level the grid cannot offer
 	ld   [wLabPickerLevel], a
 	jr   .pending
 
@@ -126,8 +128,8 @@ LabLevelSelectMain::
 	bit  PADB_DOWN, c
 	ret  z
 	ld   a, [wLabPickerLevel]
-	and  a
-	jr   z, .consume                ; already at 0
+	cp   PICKER_FIRST + 1
+	jr   c, .consume                ; already at A; 0-9 are the grid's to offer
 	dec  a
 	ld   [wLabPickerLevel], a
 	jr   .consume

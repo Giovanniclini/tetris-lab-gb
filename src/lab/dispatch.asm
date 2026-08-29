@@ -276,6 +276,8 @@ DEF TILE_HEART    EQU $27
 DEF TILE_FRAME    EQU $2c       ; what the original draws in the heart cell
 DEF TILE_BLANK    EQU $2f
 DEF GRID_LAST     EQU 9
+DEF PICKER_FIRST  EQU GRID_LAST + 1     ; A. The grid already offers 0-9, so the
+                                        ; picker starts where the grid stops.
 
 DEF FOCUS_GRID    EQU 0
 DEF FOCUS_LEVEL   EQU 1

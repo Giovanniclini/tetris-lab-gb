@@ -266,6 +266,66 @@ def test_the_level_you_played_is_on_screen_while_you_type_your_name():
         assert not t[SPRITE_HIDDEN], "the grid cursor was hidden for a grid level"
 
 
+def test_b_type_name_entry_is_left_alone():
+    """Reported by Giovanni after winning a B-type game: the level picker was
+    drawn into B-type's difficulty grid while he typed his name, and stayed.
+
+    Name entry runs on the screen the game was played on, and B-type's is a
+    different layout the Lab never draws. Our cells land in the middle of its
+    grids - the picker's is one of the difficulty digits - and the original
+    never repaints them, so whatever we put there is there for good.
+
+    Asserted as "the screen did not change", not "the picker cell is right":
+    three routines were painting, and naming the one that showed would leave
+    the other two free to start showing later.
+    """
+    GS_B_TYPE_SELECTION_MAIN, GS_ENTERING_HIGH_SCORE = 0x13, 0x15
+    MODE_BTYPE = 1
+    # Rows 0-11: the title, the LEVEL grid and the HIGH grid. The high score
+    # table below them is the one thing that legitimately differs - the entry
+    # being typed is in it.
+    LAYOUT = range(0, 12)
+
+    def screen(t):
+        return [[t[0x9800 + r * 32 + c] for c in range(20)] for r in LAYOUT]
+
+    with Tetris(ROM) as t:
+        t.to_menu()
+        for _ in range(MODE_BTYPE):
+            t.press("down")
+        t.press("start")
+        t.run_until(lambda: t.state == GS_B_TYPE_SELECTION_MAIN,
+                    what="the B-type level select")
+        t.tick(20)
+        before = screen(t)
+
+        t.press("start")
+        t.run_until(lambda: t.state == 0x00, what="the game")
+        t.tick(60)
+
+        # A score worth filing, and seventh digits stored for the A-type table -
+        # without them the millions writer draws blanks over blanks and only the
+        # picker shows.
+        for i, b in enumerate(bcd(5000)):
+            t.pb.memory[wScoreBCD + i] = b
+        for i in range(3 * 23):
+            t.pb.memory[wLabHiScoreMillions + i] = 0x09
+
+        t.pb.memory[0xFFE1] = 0x0D              # game over
+        t.run_until(lambda: t.state == 0x04, what="the game over screen")
+        t.press("start")
+        t.run_until(lambda: t.state == GS_ENTERING_HIGH_SCORE,
+                    what="the name entry")
+        t.tick(30)
+
+        after = screen(t)
+        assert after == before, "\n".join(
+            f"row {r}: {['%02x' % v for v in before[i]]} -> "
+            f"{['%02x' % v for v in after[i]]}"
+            for i, r in enumerate(LAYOUT) if before[i] != after[i]
+        )
+
+
 def test_a_trainer_gets_the_uncap_without_asking_for_it():
     """The uncap sits on the shared score path, not on any mode, so a trainer
     inherits it by launching as an A-type game and does nothing else.

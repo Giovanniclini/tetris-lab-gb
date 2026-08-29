@@ -116,9 +116,20 @@ LabDispatch::
 	ret
 
 .runNameEntry:
+; The name is typed on the screen the game was played on, and B-type has its
+; own - a different layout, which the Lab does not draw on at all. Its cells
+; are where ours are: the level picker's is inside B-type's difficulty grid,
+; and the original never repaints that cell, so a nought sat in it for the rest
+; of the screen. Reported by Giovanni after winning a B-type game.
+	ldh  a, [hGameType]
+	cp   GAME_TYPE_B_TYPE
+	jr   z, .runNameEntryPlain
+
 	call LabRedrawHiScoreMillions   ; the score is on screen while the name is typed
 	call LabPaintPickerSteady       ; and so is the level it was played at
 	call LabPaintModeLabel          ; and which mode played it
+
+.runNameEntryPlain:
 	ld   hl, GameState15_EnteringHighScore
 	ret
 

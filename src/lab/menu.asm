@@ -377,6 +377,68 @@ LabMenuPaintMusic::
 
 
 ; hl = zero-terminated string, de = tilemap destination.
+; Where the original writes A-TYPE, at row 1 of the level select.
+DEF MODE_LABEL_CELL EQU _SCRN0 + 1 * 32 + 2
+
+
+; The level select says A-TYPE because that is what the original's layout says,
+; and for TETRIS that is right. For a trainer it is not: the screen you are
+; setting up is CRUNCH's, and nothing on it said so.
+;
+; Only the trainers. TETRIS keeps A-TYPE, and B-TYPE has its own screen the Lab
+; does not hook at all. The original's init repaints the layout on the way in,
+; so this only has to be written once and never restored.
+LabPaintModeLabel::
+	ld   a, [wLabMode]
+	cp   MODE_TRANSITION
+	ret  c                          ; TETRIS: A-TYPE is the right word
+	cp   MODE_LAUNCHABLE
+	ret  nc                         ; settings never reach a level select
+
+	call LabModeLabel
+	ld   hl, MODE_LABEL_CELL
+	call LabPutStringLCDSafe
+
+; And a blank after it. The layout sets A-TYPE off with one either side, and a
+; six-letter name inherits the right-hand one; a ten-letter name runs past it
+; and would meet the frame's dots with nothing between. The writer leaves hl on
+; the cell after the name, which is exactly the one to clear.
+	ld   a, TILE_BLANK
+	jp   LabPutTile
+
+
+; de = a zero-terminated string, hl = where it goes. Every cell through
+; LabPutTile: this screen is painted with the LCD on, and a bare write is
+; dropped while a line is being drawn.
+LabPutStringLCDSafe::
+	ld   a, [de]
+	and  a
+	ret  z
+	inc  de
+	call LabPutTile                 ; keeps de and hl; clobbers a and b
+	inc  hl
+	jr   LabPutStringLCDSafe
+
+
+; a = a mode. Returns de = its label, by walking the labels the menu draws -
+; one zero-terminated string per row, in wLabMode order, so the row's name and
+; the level select's are the same string and cannot drift apart.
+LabModeLabel::
+	ld   de, LabMenuLabels
+	and  a
+	ret  z
+	ld   b, a
+
+.skipOne:
+	ld   a, [de]
+	inc  de
+	and  a
+	jr   nz, .skipOne
+	dec  b
+	jr   nz, .skipOne
+	ret
+
+
 LabMenuPutString::
 	ld   a, [hl+]
 	and  a

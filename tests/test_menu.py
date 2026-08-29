@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from tools.emu import (Tetris, sym, hATypeLevel, hIsHardMode,  # noqa: E402
-                       GS_IN_GAME_MAIN)
+                       GS_IN_GAME_MAIN, GS_A_TYPE_SELECTION_MAIN)
 
 ROM = "build/tetrislab.gb"
 
@@ -93,6 +93,60 @@ def test_picker_opens_and_closes_from_the_grid():
         t.press("left")
         assert t[wLabFocus] == FOCUS_GRID, "focus should have returned to the grid"
         assert t[hATypeLevel] == 9, "focus should return to grid cell 9"
+
+
+def test_the_level_select_says_which_mode_it_is_setting_up():
+    """The layout says A-TYPE because that is what the original screen is. For
+    a trainer it is the wrong word - the screen you are setting up is CRUNCH's,
+    and nothing on it said so.
+
+    The label is the same string the menu row draws, so the two cannot drift.
+
+    Spacing is part of it: the layout sets A-TYPE off with a blank either side,
+    and a name long enough to pass the right-hand one has to bring its own or it
+    meets the frame's dots with nothing between.
+    """
+    HEADER = [0x9800 + 1 * 32 + c for c in range(2, 14)]
+
+    def header(row):
+        with Tetris(ROM) as t:
+            t.to_menu()
+            for _ in range(row):
+                t.press("down")
+            t.press("start")
+            t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+            t.tick(30)
+            out = ""
+            for a in HEADER:
+                v = t[a]
+                if 0x0A <= v <= 0x23:
+                    out += chr(ord("A") + v - 0x0A)
+                elif v == 0x25:
+                    out += "-"
+                elif v <= 9:
+                    out += "0123456789"[v]
+                else:
+                    break                       # frame or blank: end of the word
+            return out
+
+    def spaced(row, word):
+        """The word, with a blank on each side of it."""
+        with Tetris(ROM) as t:
+            t.to_menu()
+            for _ in range(row):
+                t.press("down")
+            t.press("start")
+            t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+            t.tick(30)
+            before = t[0x9800 + 1 * 32 + 1]
+            after = t[0x9800 + 1 * 32 + 2 + len(word)]
+            return before == TILE_BLANK and after == TILE_BLANK
+
+    MODE_TETRIS, MODE_TRANSITION, MODE_CRUNCH = 0, 2, 3
+    for row, word in ((MODE_TETRIS, "A-TYPE"), (MODE_TRANSITION, "TRANSITION"),
+                      (MODE_CRUNCH, "CRUNCH")):
+        assert header(row) == word, f"header reads {header(row)!r}, wanted {word!r}"
+        assert spaced(row, word), f"{word} is not set off by a blank on both sides"
 
 
 def test_picker_clamps_at_both_ends():

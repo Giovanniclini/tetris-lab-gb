@@ -60,6 +60,7 @@ LabLevelSelectMain::
 	xor  a
 	ld   [wLabRedrawPending], a
 	call LabDrawHearts
+	call LabPaintModeLabel          ; whose level select this is
 	call LabUpdateHighScores        ; the original's init painted the grid level
 	call LabPaintFields
 

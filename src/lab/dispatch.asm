@@ -41,6 +41,7 @@ LabInit::
 ; ---------------------------------------------------------------------------
 
 LabDispatch::
+	call LabClearRestartWhenReleased
 	ldh  a, [hGameState]
 	cp   GS_LEVEL_ENDED_MAIN
 	jr   z, .levelEnded

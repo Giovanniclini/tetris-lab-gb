@@ -150,6 +150,77 @@ def test_restart_does_not_leave_the_game_paused():
         assert t[hGamePaused] == 0, "restarted into a paused game"
 
 
+def test_holding_the_combination_restarts_once():
+    """Reported by Giovanni, who saw QCKTAP's panel flicker back to SCORE for as
+    long as he held the buttons.
+
+    The init sets GS_IN_GAME_MAIN itself, so by the time MainLoop's reset check
+    runs the state no longer says "initialising" - and the guard that was meant
+    to let a restart finish was reading exactly that. A combination still held
+    therefore started the whole init again, once per frame: the board rebuilt
+    sixty times a second, the LCD off and on with it, and anything the Lab draws
+    on the game screen back to the original layout for the whole press.
+
+    Counted as inits rather than as a flicker, because the flicker is only how
+    it showed - it was every mode, invisible in the ones that draw nothing.
+    """
+    # Frames spent in the init, not times entered: the broken version never
+    # left it while the buttons were down, so counting entries sees one either
+    # way. The init itself takes four frames or so.
+    INIT_FRAMES = 8
+
+    def initialising_while_held(frames):
+        with Tetris(ROM) as t:
+            t.start_game_at(5)
+            t.tick(120)
+            for b in COMBO:
+                t.pb.button_press(b)
+            held = sum(1 for _ in range(frames)
+                       if (t.tick(1), t.state == 0x0A)[1])
+            for b in COMBO:
+                t.pb.button_release(b)
+            t.tick(30)
+            assert t.state == GS_IN_GAME_MAIN, (
+                f"not playing after the release (state ${t.state:02X})"
+            )
+            return held
+
+    for frames in (20, 60, 120):
+        got = initialising_while_held(frames)
+        assert got <= INIT_FRAMES, (
+            f"held for {frames} frames and the game was initialising for {got} "
+            f"of them - it is restarting for as long as the buttons are down"
+        )
+
+
+def test_a_second_press_restarts_again():
+    """One restart per press, not one per game: the latch has to open when the
+    buttons come up or the second attempt does nothing."""
+    with Tetris(ROM) as t:
+        t.start_game_at(5)
+        t.tick(120)
+
+        inits, prev = 0, t.state
+        for press in range(2):
+            for b in COMBO:
+                t.pb.button_press(b)
+            for _ in range(30):
+                t.tick(1)
+                if t.state == 0x0A and prev != 0x0A:
+                    inits += 1
+                prev = t.state
+            for b in COMBO:
+                t.pb.button_release(b)
+            for _ in range(30):
+                t.tick(1)
+                if t.state == 0x0A and prev != 0x0A:
+                    inits += 1
+                prev = t.state
+
+        assert inits == 2, f"two presses started {inits} games"
+        assert t.state == GS_IN_GAME_MAIN, f"not playing (state ${t.state:02X})"
+
+
 def test_menus_still_reboot():
     """Only a game and its aftermath restart. Menus reboot, as the original does."""
     with Tetris(ROM) as t:

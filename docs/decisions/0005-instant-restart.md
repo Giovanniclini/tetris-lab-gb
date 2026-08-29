@@ -44,6 +44,15 @@ of the combination is what makes almost all of them necessary.
   reach the same `GS_IN_GAME_INIT`. Pressing the combination on a menu presses
   Start too, so the menu starts a game on the way past; without the flag that
   would be mistaken for a restart and the menu would stop rebooting.
+* **One restart per press.** The flag stays set until the buttons come up, and
+  `LabClearRestartWhenReleased` in the state dispatch is what clears it —
+  `LabInGameReset` is only reached while the combination is held, so it can
+  never see the release. Ending the flag when the init finished does not work:
+  the init sets `GS_IN_GAME_MAIN` itself, so by the time `MainLoop`'s check runs
+  the state no longer says "initialising", and a combination still held starts
+  the whole init again once per frame. The board is then rebuilt sixty times a
+  second, the LCD goes off and on with it, and anything the Lab draws on the
+  game screen flashes back to the original layout for the length of the press.
 * **The buttons are consumed** (`hButtonsHeld` cleared) so the second check does
   not undo the first. `PollInput` refills it next frame.
 * **The in-game hook stays a `jp`.** Its `ret` unwinds to whoever called

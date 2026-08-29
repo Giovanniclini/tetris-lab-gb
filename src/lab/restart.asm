@@ -76,6 +76,20 @@ LabQuitToLevelSelect::
 	ret
 
 
+; Ends a restart, once the buttons that asked for it are up. Called from the
+; dispatch rather than from LabInGameReset, because LabInGameReset is only
+; reached while the combination is held - it can never see the release.
+LabClearRestartWhenReleased::
+	ld   a, [wLabRestarting]
+	and  a
+	ret  z
+	call LabResetComboHeld
+	ret  z                          ; still held
+	xor  a
+	ld   [wLabRestarting], a
+	ret
+
+
 ; Z is set when the soft-reset combination is held.
 LabResetComboHeld::
 	ldh  a, [hButtonsHeld]
@@ -91,17 +105,20 @@ LabInGameReset::
 	and  a
 	jp   nz, Reset
 
-; A restart we started is still initialising: decline, and let it finish.
+; One restart per press. A restart we began stays in flight until the buttons
+; come up - LabClearRestartWhenReleased is what ends it, from the dispatch.
+;
+; This used to end when the init finished, which never worked: the init sets
+; GS_IN_GAME_MAIN itself, so by the time MainLoop's check runs the state no
+; longer says "initialising" and a combination still held started the whole
+; init again. Once per frame, for as long as it was down - so the board was
+; rebuilt sixty times a second, the LCD went off and on with it, and anything
+; the Lab draws on the game screen flashed back to the original layout for the
+; whole press. Reported by Giovanni, who saw QCKTAP's panel flicker back to
+; SCORE; it was every mode, just invisible in the ones that draw nothing.
 	ld   a, [wLabRestarting]
 	and  a
-	jr   z, .notRestarting
-
-	ldh  a, [hGameState]
-	cp   GS_IN_GAME_INIT
-	jr   z, .consume
-
-	xor  a                          ; init finished
-	ld   [wLabRestarting], a
+	jr   nz, .consume
 
 .notRestarting:
 ; Restart from anywhere inside a game or its aftermath. Topping out and going

@@ -36,7 +36,8 @@ GREEN = {
     0x00: (0x0F, 0x38, 0x0F),
 }
 
-MODE_TETRIS, MODE_BTYPE, MODE_TRANSITION, MODE_CRUNCH, MODE_SEED, MODE_MUSIC = range(6)
+(MODE_TETRIS, MODE_BTYPE, MODE_TRANSITION, MODE_CRUNCH,
+ MODE_QCKTAP, MODE_SEED, MODE_MUSIC) = range(7)
 
 PICKER_CELL = 0x9800 + 6 * 32 + 16
 TILE_BLANK = 0x2F
@@ -73,7 +74,7 @@ def shoot(t, name):
 
 
 def goto(t, row, mode_addr):
-    for _ in range(8):
+    for _ in range(16):
         if t[mode_addr] == row:
             return
         t.press("down" if t[mode_addr] < row else "up")
@@ -103,6 +104,28 @@ def main():
         t.run_until_state(GS_IN_GAME_MAIN)
         t.tick(60)
         shoot(t, "crunch")
+
+    with Tetris("build/tetrislab.gb") as t:
+        t.to_menu()
+        goto(t, MODE_QCKTAP, mode)
+        for _ in range(0x1A):                # right wall, ten rows tall
+            t.press("right")
+        shoot(t, "qcktap-menu")
+        t.press("start")
+        t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+        while t[hATypeLevel] < 9:
+            t.press("right")
+        t.press("start")
+        t.run_until_state(GS_IN_GAME_MAIN)
+        t.tick(40)
+        # Tap, or the box reads 0.00 and the picture does not show the feature.
+        # Every fourth frame is 15.02 Hz.
+        for _ in range(8):
+            t.pb.button_press("left")
+            t.tick(1)
+            t.pb.button_release("left")
+            t.tick(3)
+        shoot(t, "qcktap")
 
     with Tetris("build/tetrislab.gb") as t:
         t.to_menu()

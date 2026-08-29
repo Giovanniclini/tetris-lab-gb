@@ -237,8 +237,11 @@ always held both digits; what it needed was the SCORE box's left edge to draw
 the eighth in.
 
 **Status 2026-08-27:** CRUNCH, the second trainer, matching TetrisGYM's mode and
-its value exactly. The menu is six of six rows again, so **the scrolling list is
-what gates the next trainer.**
+its value exactly.
+
+**Status 2026-08-29:** QCKTAP, the third trainer, matching TetrisGYM's mode and
+its value. The menu rows are single-spaced now, which fits about twelve — the
+list no longer gates the next trainer.
 
 Work follows the revised list in `docs/community-research.md` §6.2:
 

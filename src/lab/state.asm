@@ -109,6 +109,29 @@ wLabCrunch::      db        ; CRUNCH's width, TetrisGYM's own value: every 4 is
                            ; a column off the left, every 1 off the right
 wLabCrunchPending:: db     ; set at game init, consumed on the first game frame
 wLabCrunchRowsToSend:: db  ; rows of the crunch columns still to reach the screen
+wLabQtap::        db        ; QCKTAP's column, TetrisGYM's own value: 1-$10 is
+                           ; the left wall that many rows tall, $11-$20 the right
+wLabQtapPending:: db       ; set at game init, consumed on the first game frame
+wLabQtapWasSettling:: db   ; last frame's hPieceFallingState, to catch the edge
+                           ; back to NONE that means a new piece
+wLabQtapRowsToSend:: db    ; rows of the rebuilt board still to reach the screen
+
+; Tap rate. See hz.asm - the window, the arithmetic scratch, and what is on
+; screen so it is only repainted on change.
+wLabHzTaps::     db
+wLabHzFrames::   db
+wLabHzDebounce:: db
+wLabHzDir::      db
+wLabHzValue::    dw        ; hz x 100, binary
+wLabHzDrawn::    dw
+wLabHzProd::     ds 3
+
+; Scratch for LabDigits4, which QCKTAP's bar count shares with the rate.
+wLabDigits::     ds 4
+
+; Bars that have landed since the drill started, and what is on screen.
+wLabQtapBars::      dw
+wLabQtapBarsDrawn:: dw
 
 ; The controller as the player actually held it, before LabSuppressPushdown
 ; edits it. Anything that wants to *show* the input - toni asked for an input
@@ -141,7 +164,7 @@ wLabScoreZeroMoved:: db
 ; them. See LabFileHighScore.
 wLabHiScoreMillions:: ds (MAX_LEVEL + 1) * 3
 
-	ds 934
+	ds 912
 wLabStateEnd::
 
 ; The TRANSITION row's top value, shown as F. TetrisGYM has one more, G, which

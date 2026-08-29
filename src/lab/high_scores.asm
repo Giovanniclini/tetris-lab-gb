@@ -371,13 +371,14 @@ DEF MODE_TETRIS     EQU 0
 DEF MODE_BTYPE      EQU 1
 DEF MODE_TRANSITION EQU 2
 DEF MODE_CRUNCH     EQU 3
-DEF MODE_LAUNCHABLE EQU 4           ; rows below this start a game
-DEF MODE_SEED       EQU 4
-DEF MODE_MUSIC      EQU 5
-DEF MODE_COUNT      EQU 6
+DEF MODE_QCKTAP     EQU 4
+DEF MODE_LAUNCHABLE EQU 5           ; rows below this start a game
+DEF MODE_SEED       EQU 5
+DEF MODE_MUSIC      EQU 6
+DEF MODE_COUNT      EQU 7
 
 DEF MENU_ROW0       EQU _SCRN0 + 6 * 32 + 3   ; first entry
-DEF MENU_STRIDE     EQU 2 * 32                ; a blank line between entries
+DEF MENU_STRIDE     EQU 1 * 32                ; one row per entry
 DEF MENU_TEXT_COL   EQU 2                     ; label starts 2 cells in
 DEF MENU_VALUE_COL  EQU 13                    ; the row's value, right of it
 

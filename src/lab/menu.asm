@@ -27,9 +27,9 @@ LabMenuInput::
 	jp   nz, .editingSeed           ; jp: the CRUNCH row put this out of jr range
 
 	bit  PADB_START, c
-	jr   nz, .confirm
+	jp   nz, .confirm               ; jp: the QCKTAP row put this out of jr range
 	bit  PADB_A, c
-	jr   nz, .confirm
+	jp   nz, .confirm
 
 	bit  PADB_DOWN, c
 	jr   z, .notDown
@@ -65,6 +65,8 @@ LabMenuInput::
 	jr   z, .adjustMusic
 	cp   MODE_CRUNCH
 	jr   z, .adjustCrunch
+	cp   MODE_QCKTAP
+	jr   z, .adjustQtap
 	cp   MODE_TRANSITION
 	ret  nz
 
@@ -88,6 +90,21 @@ LabMenuInput::
 	add  b
 	and  CRUNCH_MAX                 ; 0-F, wrapping at both ends
 	ld   [wLabCrunch], a
+	jp   LabMenuSound
+
+; Likewise TetrisGYM's, but its range is 0-$20 rather than a nibble, so the
+; wrap cannot be a mask. Which end it fell off is bit 7: $21 above, $FF below.
+.adjustQtap:
+	ld   a, [wLabQtap]
+	add  b
+	cp   QTAP_MAX + 1
+	jr   c, .storeQtap
+	bit  7, a
+	ld   a, QTAP_MAX
+	jr   nz, .storeQtap
+	xor  a
+.storeQtap:
+	ld   [wLabQtap], a
 	jp   LabMenuSound
 
 .adjustMusic:
@@ -181,6 +198,8 @@ LabMenuLaunch::
 	jr   z, .transition
 	cp   MODE_CRUNCH
 	jr   z, .transition             ; same handover: A-type, level from the picker
+	cp   MODE_QCKTAP
+	jr   z, .transition
 
 	ld   a, GAME_TYPE_A_TYPE
 	ldh  [hGameType], a
@@ -280,6 +299,9 @@ LabMenuPaint::
 	cp   MODE_CRUNCH
 	call z, LabMenuPaintCrunch
 	ld   a, b
+	cp   MODE_QCKTAP
+	call z, LabMenuPaintQtap
+	ld   a, b
 	cp   MODE_SEED
 	call z, LabMenuPaintSeed
 	ld   a, b
@@ -323,6 +345,15 @@ LabMenuPaintLevel::
 LabMenuPaintCrunch::
 	call LabMenuValueCell
 	ld   a, [wLabCrunch]
+	jp   LabPutTile
+
+
+; 0-9 then A-W: the font runs the digits and the alphabet in one block from
+; $00, so the tile is the value here too - which is how TetrisGYM shows the
+; same range in one cell.
+LabMenuPaintQtap:
+	call LabMenuValueCell
+	ld   a, [wLabQtap]
 	jp   LabPutTile
 
 
@@ -465,6 +496,7 @@ LabMenuLabels::
 	db "B-TYPE", 0
 	db "TRANSITION", 0
 	db "CRUNCH", 0
+	db "QCKTAP", 0
 	db "SEED", 0
 	db "MUSIC", 0
 POPC

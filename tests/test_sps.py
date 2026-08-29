@@ -19,7 +19,11 @@ from tools.lfsr import step as lfsr_step  # noqa: E402
 
 ROM = "build/tetrislab.gb"
 
-hCurrPiece = 0xFF92
+# The piece being played, as the game itself names it: wSpriteSpecs +
+# SPR_SPEC_SpecIdx. Spec indexes are piece * 4 + rotation, so the low two bits
+# are the rotation and the piece is the rest.
+wCurrPieceSpec = 0xC203
+PIECE = 0xFC
 wLabRngHi, wLabRngMid, wLabRngLo = sym("wLabRngHi"), sym("wLabRngMid"), sym("wLabRngLo")
 wLabSeedHi, wLabSeedMid, wLabSeedLo = sym("wLabSeedHi"), sym("wLabSeedMid"), sym("wLabSeedLo")
 GS_IN_GAME_INIT = 0x0A
@@ -44,10 +48,24 @@ def rng(t):
 
 
 def piece_sequence(seed, frames=3000):
+    """The pieces a seed deals, from the level select rather than mid-game.
+
+    Arming the LFSR after play has started leaves the pieces before it coming
+    from rDIV, and the retry loop compares each new draw against the piece
+    already down ($205B) - so those unseeded pieces decide how many times the
+    generator draws for the seeded ones. The sequence stays deterministic, but
+    it is deterministic in the cycle timing of whatever build is running, and
+    the game tops itself out at a different piece each time the ROM moves.
+    Seeding the game at its init is what a player does anyway.
+    """
     with Tetris(ROM) as t:
-        t.start_game_at(9)
-        t.tick(30)
-        arm(t, seed)
+        t.to_level_select()
+        t.pb.memory[wLabSeedHi] = (seed >> 16) & 0xFF
+        t.pb.memory[wLabSeedMid] = (seed >> 8) & 0xFF
+        t.pb.memory[wLabSeedLo] = seed & 0xFF
+        t.pb.memory[hATypeLevel] = 9
+        t.press("start")
+        t.run_until_state(GS_IN_GAME_MAIN)
         seq, last = [], t[hHiddenLoadedPiece]
         for _ in range(frames):
             t.tick(1)
@@ -207,7 +225,7 @@ def test_the_same_seed_deals_the_same_sequence_after_a_game():
     def seeded_game(play_first):
         t = Tetris(ROM)
         t.to_menu()
-        for _ in range(4):
+        for _ in range(5):
             t.press("down")                    # SEED
         t.press("a")
         for nibble in (0x1, 0x1, 0x9, 0x9, 0x8, 0xF):
@@ -215,7 +233,7 @@ def test_the_same_seed_deals_the_same_sequence_after_a_game():
                 t.press("up")
             t.press("right")
         t.press("a")
-        for _ in range(4):
+        for _ in range(5):
             t.press("up")                      # back to TETRIS
         t.press("start")
         t.run_until_state(0x11)
@@ -234,7 +252,7 @@ def test_the_same_seed_deals_the_same_sequence_after_a_game():
         seen, last = [], None
         for _ in range(4000):
             t.pb.tick()
-            cur = t[hCurrPiece]
+            cur = t[wCurrPieceSpec] & PIECE
             if cur != last:
                 seen.append(cur)
                 last = cur
@@ -254,7 +272,7 @@ def test_seed_can_be_entered_from_the_menu():
     Up/Down change it. See docs/decisions/0007."""
     with Tetris(ROM) as t:
         t.to_menu()
-        for _ in range(4):
+        for _ in range(5):
             t.press("down")                    # TETRIS -> ... -> SEED
         t.press("a")                           # open the digits
         for nibble in (0x1, 0x1, 0x9, 0x9, 0x8, 0xF):
@@ -262,7 +280,7 @@ def test_seed_can_be_entered_from_the_menu():
                 t.press("up")
             t.press("right")
         t.press("a")                           # close them
-        for _ in range(4):
+        for _ in range(5):
             t.press("up")                      # back up to TETRIS
         seed = (t[wLabSeedHi] << 16) | (t[wLabSeedMid] << 8) | t[wLabSeedLo]
         assert seed == 0x11998F, f"typed $11998F, got ${seed:06X}"
@@ -289,7 +307,10 @@ def test_every_mode_deals_the_same_sequence_for_a_seed():
     sequence that is only right in one mode is worse than no seed at all.
     """
     from tools.emu import GS_A_TYPE_SELECTION_MAIN, hATypeLevel
-    hCurrPiece = 0xFF92
+    # QCKTAP is not here, and cannot be: it deals an I every time by design, so
+    # its sequence is a constant rather than the seed's. The invariant it has to
+    # keep instead is that it takes nothing from the generator - which it does
+    # not, having replaced the generator's output rather than drawn from it.
     MODES = {"TETRIS": 0, "TRANSITION": 2, "CRUNCH": 3}
     SEED = 0x11998F
 
@@ -312,7 +333,7 @@ def test_every_mode_deals_the_same_sequence_for_a_seed():
             seen, last = [], None
             for _ in range(frames):
                 t.tick(1)
-                v = t[hCurrPiece]
+                v = t[wCurrPieceSpec] & PIECE
                 if v and v != last:
                     seen.append(v)
                     last = v

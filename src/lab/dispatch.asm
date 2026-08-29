@@ -144,6 +144,7 @@ LabDispatch::
 	call LabArmSeed
 	call LabArmDrill
 	call LabCrunchArm
+	call LabQtapArm
 	ld   hl, GameState0a_InGameInit
 	ret
 
@@ -254,6 +255,7 @@ LabDispatch::
 	call LabCrunchApply
 	call LabCrunchFill
 	call LabCrunchSendRows
+	call LabQtapApply
 	call LabSuppressPushdown
 	call LabDrawScoreCarry
 	ld   hl, GameState00_InGameMain

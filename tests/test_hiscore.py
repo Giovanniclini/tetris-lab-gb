@@ -182,6 +182,48 @@ def test_the_millions_do_not_survive_a_change_of_level():
         )
 
 
+def test_the_mode_you_played_is_on_screen_while_you_type_your_name():
+    """The name is typed on the level select's screen, so it inherits that
+    screen's header - and the header is painted by the level select's own
+    states, which $15 is not one of. A crunch run recorded itself under
+    A-TYPE."""
+    from tools.emu import GS_IN_GAME_MAIN, GS_A_TYPE_SELECTION_MAIN
+    MODE_TETRIS, MODE_CRUNCH = 0, 3
+
+    def header(row):
+        with Tetris(ROM) as t:
+            t.to_menu()
+            for _ in range(row):
+                t.press("down")
+            t.press("start")
+            t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+            t.tick(20)
+            t.pb.memory[hATypeLevel] = LEVEL
+            t.press("start")
+            t.run_until_state(GS_IN_GAME_MAIN)
+            t.tick(60)
+            for i, b in enumerate(bcd(5000)):
+                t.pb.memory[wScoreBCD + i] = b
+            t.pb.memory[0xFFE1] = 0x0D
+            t.run_until(lambda: t.state == 0x04, what="the game over screen")
+            t.press("start")
+            t.run_until(lambda: t.state == 0x15, what="the name entry")
+            t.tick(30)
+            out = ""
+            for c in range(2, 14):
+                v = t[0x9800 + 1 * 32 + c]
+                if 0x0A <= v <= 0x23:
+                    out += chr(ord("A") + v - 0x0A)
+                elif v == 0x25:
+                    out += "-"
+                else:
+                    break
+            return out
+
+    assert header(MODE_TETRIS) == "A-TYPE", header(MODE_TETRIS)
+    assert header(MODE_CRUNCH) == "CRUNCH", header(MODE_CRUNCH)
+
+
 def test_the_level_you_played_is_on_screen_while_you_type_your_name():
     """Reported by Giovanni: while typing a high score name, the picker was not
     there and the grid read 9 whatever you had played.

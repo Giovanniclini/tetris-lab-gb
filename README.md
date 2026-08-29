@@ -114,6 +114,9 @@ Boot reaches the title screen in about a second — the copyright screen is skip
 build publishes. `1 PLAYER` goes to the Lab menu; `2 PLAYER` is the link-cable game, and lives
 here because the original's serial code only pairs two Game Boys from this screen.
 
+A trainer's level select says so in the corner where the original writes `A-TYPE` — the word
+comes from the same string as the menu row, so the two cannot disagree.
+
 The A-TYPE/B-TYPE screen is the Lab menu, modelled on
 [TetrisGYM's](https://github.com/kirjavascript/TetrisGYM): one list, playable modes first,
 settings after, each row carrying its own value. `Up`/`Down` move, `Left`/`Right` change the

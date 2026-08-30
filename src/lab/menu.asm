@@ -27,7 +27,7 @@ LabMenuInput::
 	jp   nz, .editingSeed           ; jp: the CRUNCH row put this out of jr range
 
 	bit  PADB_START, c
-	jp   nz, .confirm               ; jp: the QCKTAP row put this out of jr range
+	jp   nz, .confirm               ; jp: the OBSTACLE row put this out of jr range
 	bit  PADB_A, c
 	jp   nz, .confirm
 
@@ -36,9 +36,9 @@ LabMenuInput::
 	ld   a, [wLabMode]
 	inc  a
 	cp   MODE_COUNT
-	jr   c, .setRow
-	xor  a
-	jr   .setRow
+	jp   c, .setRow                 ; jp: the gap in the OBSTACLE row's range
+	xor  a                          ; pushed .setRow out of jr reach
+	jp   .setRow
 
 .notDown:
 	bit  PADB_UP, c
@@ -65,8 +65,8 @@ LabMenuInput::
 	jr   z, .adjustMusic
 	cp   MODE_CRUNCH
 	jr   z, .adjustCrunch
-	cp   MODE_QCKTAP
-	jr   z, .adjustQtap
+	cp   MODE_OBSTACLE
+	jr   z, .adjustObstacle
 	cp   MODE_TRANSITION
 	ret  nz
 
@@ -92,19 +92,35 @@ LabMenuInput::
 	ld   [wLabCrunch], a
 	jp   LabMenuSound
 
-; Likewise TetrisGYM's, but its range is 0-$20 rather than a nibble, so the
-; wrap cannot be a mask. Which end it fell off is bit 7: $21 above, $FF below.
-.adjustQtap:
-	ld   a, [wLabQtap]
+; Likewise TetrisGYM's, but its range is wider than a nibble, so the wrap cannot
+; be a mask. Which end it fell off is bit 7: past the top above, $FF below.
+;
+; And the two heights per side that no bar can cross are stepped over rather
+; than offered - see obstacle.asm. $0F is the value above the left wall's
+; tallest and $10 the one below the right wall's shortest, so those are the two
+; the step can land on.
+.adjustObstacle:
+	ld   a, [wLabObstacle]
 	add  b
-	cp   QTAP_MAX + 1
-	jr   c, .storeQtap
+	cp   OBSTACLE_HEIGHT_MAX + 1
+	jr   nz, .notPastTheLeftWall
+	ld   a, OBSTACLE_RIGHT          ; stepping up, straight to the right wall
+	jr   .storeObstacle
+
+.notPastTheLeftWall:
+	cp   OBSTACLE_RIGHT - 1
+	jr   nz, .notUnderTheRightWall
+	ld   a, OBSTACLE_HEIGHT_MAX     ; and stepping down, back to the left
+
+.notUnderTheRightWall:
+	cp   OBSTACLE_MAX + 1
+	jr   c, .storeObstacle
 	bit  7, a
-	ld   a, QTAP_MAX
-	jr   nz, .storeQtap
+	ld   a, OBSTACLE_MAX
+	jr   nz, .storeObstacle
 	xor  a
-.storeQtap:
-	ld   [wLabQtap], a
+.storeObstacle:
+	ld   [wLabObstacle], a
 	jp   LabMenuSound
 
 .adjustMusic:
@@ -198,7 +214,7 @@ LabMenuLaunch::
 	jr   z, .transition
 	cp   MODE_CRUNCH
 	jr   z, .transition             ; same handover: A-type, level from the picker
-	cp   MODE_QCKTAP
+	cp   MODE_OBSTACLE
 	jr   z, .transition
 
 	ld   a, GAME_TYPE_A_TYPE
@@ -299,8 +315,8 @@ LabMenuPaint::
 	cp   MODE_CRUNCH
 	call z, LabMenuPaintCrunch
 	ld   a, b
-	cp   MODE_QCKTAP
-	call z, LabMenuPaintQtap
+	cp   MODE_OBSTACLE
+	call z, LabMenuPaintObstacle
 	ld   a, b
 	cp   MODE_SEED
 	call z, LabMenuPaintSeed
@@ -351,9 +367,9 @@ LabMenuPaintCrunch::
 ; 0-9 then A-W: the font runs the digits and the alphabet in one block from
 ; $00, so the tile is the value here too - which is how TetrisGYM shows the
 ; same range in one cell.
-LabMenuPaintQtap:
+LabMenuPaintObstacle:
 	call LabMenuValueCell
-	ld   a, [wLabQtap]
+	ld   a, [wLabObstacle]
 	jp   LabPutTile
 
 
@@ -496,7 +512,7 @@ LabMenuLabels::
 	db "B-TYPE", 0
 	db "TRANSITION", 0
 	db "CRUNCH", 0
-	db "QCKTAP", 0
+	db "OBSTACLE", 0
 	db "SEED", 0
 	db "MUSIC", 0
 POPC

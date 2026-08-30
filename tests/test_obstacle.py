@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""QCKTAP puts one column against one wall and deals nothing but bars.
+"""OBSTACLE puts one column against one wall and deals nothing but bars.
 
-    .venv/bin/python tests/test_qtap.py
+    .venv/bin/python tests/test_obstacle.py
 
 The value is TetrisGYM's (src/modes/qtap.asm): 1-$10 is the left wall that many
 rows tall, $11-$20 the right, so a number means the same shape on both ROMs.
@@ -28,9 +28,9 @@ wCurrPieceSpec, PIECE, PIECE_I = 0xC203, 0xFC, 0x08
 
 hPieceFallingState = 0xFF98
 
-wLabMode, wLabQtap = sym("wLabMode"), sym("wLabQtap")
+wLabMode, wLabObstacle = sym("wLabMode"), sym("wLabObstacle")
 wLabHzValue = sym("wLabHzValue")
-wLabQtapBars = sym("wLabQtapBars")
+wLabObstacleBars = sym("wLabObstacleBars")
 wScoreBCD = 0xC0A0
 
 # The SCORE box: row 1 is its label, row 3 its digits. Columns 13 and 19 of row
@@ -42,8 +42,15 @@ PAUSE_MAP = 0x0400              # _SCRN1 - _SCRN0
 FONT = {**{i: str(i) for i in range(10)},
         **{0x0A + i: chr(ord("A") + i) for i in range(26)},
         0x24: ".", 0x25: "-", 0x2F: " "}
-MODE_TETRIS, MODE_QCKTAP = 0, 4
-QTAP_MAX = 0x20
+MODE_TETRIS, MODE_OBSTACLE = 0, 4
+OBSTACLE_HEIGHT_MAX = 14        # four rows of headroom for a standing bar
+OBSTACLE_RIGHT = 0x11
+OBSTACLE_MAX = OBSTACLE_RIGHT + OBSTACLE_HEIGHT_MAX - 1     # $1E
+
+# Every value the menu offers, in the order stepping right visits them: the two
+# heights per side that no bar can cross are not among them.
+SELECTABLE = [0] + list(range(1, OBSTACLE_HEIGHT_MAX + 1)) + \
+             list(range(OBSTACLE_RIGHT, OBSTACLE_MAX + 1))
 
 
 def to_row(t, row):
@@ -53,10 +60,10 @@ def to_row(t, row):
 
 
 def start(value, level=9, ticks=90):
-    """A game running, with QCKTAP set to `value`."""
+    """A game running, with OBSTACLE set to `value`."""
     t = Tetris(ROM)
-    to_row(t, MODE_QCKTAP)
-    t.pb.memory[wLabQtap] = value
+    to_row(t, MODE_OBSTACLE)
+    t.pb.memory[wLabObstacle] = value
     t.press("start")
     t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
     t.tick(20)
@@ -82,14 +89,14 @@ def want(value):
     """
     if value == 0:
         return ["." * COLS] * ROWS
-    col, height = (1, value) if value <= 0x10 else (8, value - 0x10)
+    col, height = (1, value) if value < OBSTACLE_RIGHT else (8, value - 0x10)
     rows = ["." * COLS] * (ROWS - height)
     rows += ["." * col + "#" + "." * (COLS - col - 1)] * height
     return rows
 
 
 def test_every_value_means_what_it_means_in_tetrisgym():
-    for value in range(QTAP_MAX + 1):
+    for value in SELECTABLE:
         with start(value) as t:
             got = board(t)
             assert got == want(value), (
@@ -101,7 +108,7 @@ def test_the_screen_and_the_collision_map_agree():
     """The buffer is what the piece collides against and the screen is what you
     aim by. A column drawn in one and not the other is a wall you cannot see or
     a wall that is not there."""
-    for value in (0x01, 0x07, 0x10, 0x11, 0x18, 0x20):
+    for value in (0x01, 0x07, 0x0E, 0x11, 0x18, 0x1E):
         with start(value) as t:
             assert board(t, BUF) == board(t, SCRN), f"${value:02X} disagrees"
 
@@ -172,7 +179,7 @@ def test_the_preview_survives_an_instant_restart():
 
 
 def bars(t):
-    return t[wLabQtapBars] | (t[wLabQtapBars + 1] << 8)
+    return t[wLabObstacleBars] | (t[wLabObstacleBars + 1] << 8)
 
 
 def text(t, base, first=13, last=20):
@@ -315,28 +322,104 @@ def test_pushing_down_works_and_scores_nothing():
     assert score == [0, 0, 0], f"drop points landed on the score: {score}"
 
 
-def test_the_row_counts_0_to_20_and_wraps():
-    """$20 is TetrisGYM's own limit (MENUSIZES). It shows in one cell because
-    the font runs 0-9 then A-Z from $00, so the tile is the value - which is how
-    TetrisGYM shows the same range."""
+def test_the_bar_can_reach_the_well_at_every_selectable_height():
+    """Reported by Tolstoj: "The bars can go higher than the spawning height,
+    which is not ideal."
+
+    A standing bar is four rows, so it can only cross the column if the column's
+    top is at row 4 or below. TetrisGYM's sixteen leaves exactly those four rows
+    on a 20-row field; ours is 18 rows, so the same rule is fourteen. At fifteen
+    the bar stops two columns short of the well and the drill cannot be finished
+    at all - which is what this walks, height by height, rather than trusting
+    the arithmetic.
+
+    Measured as how far left a standing bar gets, because the board is rebuilt
+    the moment it lands and a landed piece is gone before it can be read.
+    """
+    X = 0xC202                      # wSpriteSpecs[0].BaseXOffset
+    WELL = 31                       # against the left wall
+
+    def leftmost(value):
+        with start(value, level=0, ticks=20) as t:
+            t.press("a")            # stand the bar up
+            t.hold("left")
+            lo = t[X]
+            for _ in range(600):
+                t.tick(1)
+                lo = min(lo, t[X])
+                if t[hPieceFallingState]:
+                    break
+            t.release("left")
+            return lo
+
+    # Taken off the menu, not from the constant above: "every height the drill
+    # offers is playable" is the claim, and a test that asks its own idea of the
+    # range would still pass if the ROM's range grew.
     with Tetris(ROM) as t:
-        to_row(t, MODE_QCKTAP)
-        seen = [t[wLabQtap]]
-        for _ in range(QTAP_MAX + 1):
+        to_row(t, MODE_OBSTACLE)
+        offered = {t[wLabObstacle]}
+        for _ in range(80):
             t.press("right")
-            seen.append(t[wLabQtap])
-        assert seen == list(range(QTAP_MAX + 1)) + [0], seen
+            offered.add(t[wLabObstacle])
+
+    for value in sorted(v for v in offered if 0 < v < OBSTACLE_RIGHT):
+        got = leftmost(value)
+        assert got == WELL, (
+            f"height {value}: the standing bar stopped at X {got}, not {WELL} - "
+            f"the column is too tall to cross"
+        )
+
+
+def test_the_heights_no_bar_can_cross_are_not_offered():
+    """The two per side that fail the test above. Asserted against the menu
+    rather than against the drawing code: the value is the thing a player picks,
+    and a shape that cannot be played should not be reachable."""
+    with Tetris(ROM) as t:
+        to_row(t, MODE_OBSTACLE)
+        seen = {t[wLabObstacle]}
+        for _ in range(80):
+            t.press("right")
+            seen.add(t[wLabObstacle])
+        for _ in range(80):
+            t.press("left")
+            seen.add(t[wLabObstacle])
+        unplayable = {0x0F, 0x10, 0x1F, 0x20}
+        assert not (seen & unplayable), (
+            f"the menu reaches {sorted(hex(v) for v in seen & unplayable)}"
+        )
+
+
+def test_the_row_counts_the_selectable_values_and_wraps():
+    """TetrisGYM's own limit is $20 (MENUSIZES); ours stops at $1E because the
+    last two heights per side cannot be played on an 18-row field. It shows in
+    one cell because the font runs 0-9 then A-Z from $00, so the tile is the
+    value - which is how TetrisGYM shows its range too."""
+    with Tetris(ROM) as t:
+        to_row(t, MODE_OBSTACLE)
+        seen = [t[wLabObstacle]]
+        for _ in range(len(SELECTABLE)):
+            t.press("right")
+            seen.append(t[wLabObstacle])
+        assert seen == SELECTABLE + [0], [hex(v) for v in seen]
         t.press("left")
-        assert t[wLabQtap] == QTAP_MAX, "Left from 0 should wrap to $20"
+        assert t[wLabObstacle] == OBSTACLE_MAX, "Left from 0 should wrap to $1E"
+
+        # and back down over the gap, which is a separate branch
+        t.pb.memory[wLabObstacle] = OBSTACLE_RIGHT
+        t.press("left")
+        assert t[wLabObstacle] == OBSTACLE_HEIGHT_MAX, (
+            f"left from the shortest right wall should reach the tallest left, "
+            f"got ${t[wLabObstacle]:02X}"
+        )
 
 
 def test_it_stays_in_its_own_mode():
     """The bar forcing writes hHiddenLoadedPiece, which every mode's generator
     reads. Leaking it would turn TETRIS into a bar drill."""
     with Tetris(ROM) as t:
-        to_row(t, MODE_QCKTAP)
-        t.pb.memory[wLabQtap] = 0x08
-        for _ in range(MODE_QCKTAP):
+        to_row(t, MODE_OBSTACLE)
+        t.pb.memory[wLabObstacle] = 0x08
+        for _ in range(MODE_OBSTACLE):
             t.press("up")
         assert t[wLabMode] == MODE_TETRIS
         t.press("start")
@@ -350,7 +433,7 @@ def test_it_stays_in_its_own_mode():
             t.tick(1)
             seen.add(t[wCurrPieceSpec] & PIECE)
         assert len(seen) > 1, f"TETRIS dealt only {seen}"
-        assert board(t, BUF) != want(0x08), "TETRIS drew QCKTAP's column"
+        assert board(t, BUF) != want(0x08), "TETRIS drew OBSTACLE's column"
 
 
 TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]

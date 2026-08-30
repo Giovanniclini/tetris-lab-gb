@@ -1,32 +1,45 @@
 ; --------------------------------------------------------------------------
-; QCKTAP
+; OBSTACLE
 ;
 ; A single column against one wall and nothing else, rebuilt for every piece,
 ; with an I-piece dealt every time. The drill is one skill: get the bar past
-; the column and into the well before it lands - which is a tap, not a DAS
-; charge, once the column is tall enough. TetrisGYM's mode of the same name
-; (src/modes/qtap.asm), including its value, so a number means the same shape
-; on both ROMs:
+; the column and into the well before it lands - which past level 19 is a tap
+; rather than a DAS charge. TetrisGYM's mode (src/modes/qtap.asm), including
+; its value, so a number means the same shape on both ROMs:
 ;
-;   0        no column, bars on a flat floor
-;   1-$10    left wall, that many rows tall
-;   $11-$20  right wall, value - $10 rows tall
+;   0          no column, bars on a flat floor
+;   1-$0E      left wall, that many rows tall
+;   $11-$1E    right wall, value - $10 rows tall
+;
+; TetrisGYM calls this QCKTAP. It is not that here: Game Boy DAS autorepeats
+; every 9 frames, which is 6.68 Hz, so the skill this drills is getting past
+; the column rather than out-tapping the hardware. Tolstoj, 2026-08-30:
+; "quicktaps aren't really a thing in GB Tetris".
 ;
 ; The value is one tile on the menu, as every other row's is, and the labfont
-; runs 0-9 then A-Z - so $20 shows as W, exactly as it does on TetrisGYM.
+; runs 0-9 then A-Z - so $1E shows as U.
+;
+; Fourteen rows, not TetrisGYM's sixteen, and that is the same rule rather than
+; a different one. A standing bar is four rows tall, so it can only cross the
+; column if the column's top is at row 4 or below; their sixteen on a 20-row
+; field leaves exactly those four rows, and ours is 18 rows. At fifteen the bar
+; stops two columns short of the well and the drill cannot be completed at all -
+; measured, and reported by Tolstoj. The four values that would ask for it
+; ($0F, $10, $1F, $20) are not offered.
 ; --------------------------------------------------------------------------
 
-DEF QTAP_MAX        EQU $20
-DEF QTAP_RIGHT      EQU $11      ; the first value that means the right wall
-DEF QTAP_LEFT_COL   EQU 1        ; playfield columns, as TetrisGYM picks them
-DEF QTAP_RIGHT_COL  EQU 8
-DEF QTAP_BOTTOM_ROW EQU GAME_SCREEN_ROWS - 1
+DEF OBSTACLE_HEIGHT_MAX EQU 14       ; four rows of headroom for a standing bar
+DEF OBSTACLE_RIGHT      EQU $11      ; the first value that means the right wall
+DEF OBSTACLE_MAX        EQU OBSTACLE_RIGHT + OBSTACLE_HEIGHT_MAX - 1
+DEF OBSTACLE_LEFT_COL   EQU 1        ; playfield columns, as TetrisGYM picks them
+DEF OBSTACLE_RIGHT_COL  EQU 8
+DEF OBSTACLE_BOTTOM_ROW EQU GAME_SCREEN_ROWS - 1
 
 ; The I piece, in the original's own numbering: SpriteSpec_08 is the four-tile
 ; horizontal run ($8a $8b $8b $8f), and $08-$0b are its four rotations. The
 ; generator only ever produces multiples of 4, so this is a value it could have
 ; produced itself.
-DEF QTAP_PIECE_I    EQU $08
+DEF OBSTACLE_PIECE_I    EQU $08
 
 
 ; The playfield cleared, then the column. Buffer only - plain WRAM, no waiting
@@ -35,7 +48,7 @@ DEF QTAP_PIECE_I    EQU $08
 ;
 ; Columns 2-11 of the buffer, which is the playfield; columns 1 and $c are the
 ; walls the piece collides against and are not ours to clear.
-LabQtapBuild::
+LabObstacleBuild::
 	ld   hl, wGameScreenBuffer + 2
 	ld   c, GAME_SCREEN_ROWS
 .nextRow:
@@ -53,20 +66,20 @@ LabQtapBuild::
 	jr   nz, .nextRow
 
 ; the column, from the floor up
-	ld   a, [wLabQtap]
+	ld   a, [wLabObstacle]
 	and  a
 	ret  z
 	ld   c, a
-	ld   e, QTAP_LEFT_COL + 2       ; playfield column -> buffer column
-	sub  QTAP_RIGHT
+	ld   e, OBSTACLE_LEFT_COL + 2       ; playfield column -> buffer column
+	sub  OBSTACLE_RIGHT
 	jr   c, .haveColumn             ; below $11: left wall, height is the value
 	inc  a                          ; $11 is one row, not zero
 	ld   c, a
-	ld   e, QTAP_RIGHT_COL + 2
+	ld   e, OBSTACLE_RIGHT_COL + 2
 
 .haveColumn:
 	ld   d, 0
-	ld   hl, wGameScreenBuffer + QTAP_BOTTOM_ROW * GB_TILE_WIDTH
+	ld   hl, wGameScreenBuffer + OBSTACLE_BOTTOM_ROW * GB_TILE_WIDTH
 	add  hl, de
 	ld   de, -GB_TILE_WIDTH
 	ld   a, TILE_SOLID_BLOCK
@@ -91,13 +104,13 @@ LabQtapBuild::
 ; piece touches down and walks HIT_BOTTOM -> CHECK_COMPLETED_ROWS ->
 ; ALL_ROWS_PROCESSED before returning, so the edge back to zero is exactly one
 ; per piece - and it says nothing about which piece, which is the point.
-LabQtapApply::
+LabObstacleApply::
 	ld   a, [wLabMode]
-	cp   MODE_QCKTAP
+	cp   MODE_OBSTACLE
 	ret  nz
 
 	call LabHzTick
-	call LabQtapNoDropPoints
+	call LabObstacleNoDropPoints
 
 ; Every piece an I, the way TetrisGYM sends MODE_TAP to pickTetriminoLongbar.
 ; Not a hook: the generator ($2041) plays the piece it left in hHiddenLoadedPiece
@@ -105,26 +118,26 @@ LabQtapApply::
 ; it runs decides the next piece without touching a byte of it. Its retry loop
 ; still compares its own random value, so the rejection bias, the LFSR and the
 ; three attempts all behave exactly as they do everywhere else.
-	ld   a, QTAP_PIECE_I
+	ld   a, OBSTACLE_PIECE_I
 	ldh  [hHiddenLoadedPiece], a
 
 	ldh  a, [hPieceFallingState]
 	ld   b, a
-	ld   a, [wLabQtapWasSettling]
+	ld   a, [wLabObstacleWasSettling]
 	ld   c, a
 	ld   a, b
-	ld   [wLabQtapWasSettling], a
+	ld   [wLabObstacleWasSettling], a
 
-	ld   a, [wLabQtapPending]
+	ld   a, [wLabObstaclePending]
 	and  a
 	jr   nz, .firstFrame
 
 	ld   a, b
 	and  a
-	jp   nz, LabQtapSendRows        ; still settling
+	jp   nz, LabObstacleSendRows        ; still settling
 	ld   a, c
 	and  a
-	jp   z, LabQtapSendRows         ; was already falling: the same piece
+	jp   z, LabObstacleSendRows         ; was already falling: the same piece
 	jr   .landed
 
 ; The first frame of the game. The in-game init dealt the piece already on
@@ -132,8 +145,8 @@ LabQtapApply::
 ; only ones the line above cannot reach.
 .firstFrame:
 	xor  a
-	ld   [wLabQtapPending], a
-	ld   a, QTAP_PIECE_I
+	ld   [wLabObstaclePending], a
+	ld   a, OBSTACLE_PIECE_I
 	ld   [wSpriteSpecs + SPR_SPEC_SpecIdx], a
 	ld   [wSpriteSpecs + SPR_SPEC_SIZEOF + SPR_SPEC_SpecIdx], a
 
@@ -154,27 +167,27 @@ LabQtapApply::
 ; And the LINES box counts bars, which is the length of the drill. Nothing
 ; completes a line here either, so that panel is free the same way.
 	xor  a
-	ld   [wLabQtapBars], a
-	ld   [wLabQtapBars + 1], a
+	ld   [wLabObstacleBars], a
+	ld   [wLabObstacleBars + 1], a
 	ld   a, $ff
-	ld   [wLabQtapBarsDrawn], a     ; nothing on screen matches: paint at once
-	call LabQtapDrawBars
+	ld   [wLabObstacleBarsDrawn], a     ; nothing on screen matches: paint at once
+	call LabObstacleDrawBars
 	jr   .rebuild
 
 ; A bar has landed. Counted here rather than at the spawn so the number is
 ; bars *down*, which is what you have to show for the time spent.
 .landed:
-	ld   hl, wLabQtapBars
+	ld   hl, wLabObstacleBars
 	inc  [hl]
 	jr   nz, .rebuild
 	inc  hl
 	inc  [hl]
 
 .rebuild:
-	call LabQtapBuild
+	call LabObstacleBuild
 	ld   a, GAME_SCREEN_ROWS
-	ld   [wLabQtapRowsToSend], a
-	call LabQtapDrawBars
+	ld   [wLabObstacleRowsToSend], a
+	call LabObstacleDrawBars
 	; falls through
 
 
@@ -185,20 +198,20 @@ LabQtapApply::
 ; clear. CRUNCH found that the hard way - see the note there. So the rows go up
 ; on our own counter with a per-frame budget, which is what CLAUDE.md 11 asks
 ; Lab rendering to do. Three rows a frame puts the board on screen in six.
-DEF QTAP_ROWS_PER_FRAME EQU 3
+DEF OBSTACLE_ROWS_PER_FRAME EQU 3
 
-LabQtapSendRows::
-	ld   a, [wLabQtapRowsToSend]
+LabObstacleSendRows::
+	ld   a, [wLabObstacleRowsToSend]
 	and  a
 	ret  z
 
-	ld   c, QTAP_ROWS_PER_FRAME
+	ld   c, OBSTACLE_ROWS_PER_FRAME
 .nextRow:
-	ld   a, [wLabQtapRowsToSend]
+	ld   a, [wLabObstacleRowsToSend]
 	and  a
 	ret  z
 	dec  a
-	ld   [wLabQtapRowsToSend], a
+	ld   [wLabObstacleRowsToSend], a
 
 ; row a of the playfield, in both the buffer and screen 0
 	ld   h, 0
@@ -233,15 +246,15 @@ LabQtapSendRows::
 
 ; Set at the game init and consumed on the first gameplay frame: that init
 ; clears the playfield, so building it any earlier achieves nothing.
-LabQtapArm::
+LabObstacleArm::
 	ld   a, [wLabMode]
-	cp   MODE_QCKTAP
+	cp   MODE_OBSTACLE
 	ret  nz
 	ld   a, 1
-	ld   [wLabQtapPending], a
+	ld   [wLabObstaclePending], a
 	xor  a
-	ld   [wLabQtapWasSettling], a
-	ld   [wLabQtapRowsToSend], a
+	ld   [wLabObstacleWasSettling], a
+	ld   [wLabObstacleRowsToSend], a
 	ret
 
 
@@ -258,7 +271,7 @@ LabQtapArm::
 ; frame is the same thing the original does itself once it has paid out.
 ; Movement is driven by hTimer2 and the gravity reload, not by this byte, so the
 ; piece still drops.
-LabQtapNoDropPoints::
+LabObstacleNoDropPoints::
 	xor  a
 	ldh  [hNumTimesHoldingDownEvery3Frames], a
 
@@ -273,30 +286,30 @@ LabQtapNoDropPoints::
 ; Bars down, where the line count goes: row 10, column 14, four digits, which
 ; is where and how the original draws its own ($23E9). Only on change - nothing
 ; else writes there once no line can ever complete.
-DEF QTAP_BARS_CELL EQU _SCRN0 + 10 * 32 + 14
+DEF OBSTACLE_BARS_CELL EQU _SCRN0 + 10 * 32 + 14
 
-LabQtapDrawBars::
-	ld   a, [wLabQtapBars]
+LabObstacleDrawBars::
+	ld   a, [wLabObstacleBars]
 	ld   b, a
-	ld   a, [wLabQtapBarsDrawn]
+	ld   a, [wLabObstacleBarsDrawn]
 	cp   b
 	jr   nz, .paint
-	ld   a, [wLabQtapBars + 1]
+	ld   a, [wLabObstacleBars + 1]
 	ld   b, a
-	ld   a, [wLabQtapBarsDrawn + 1]
+	ld   a, [wLabObstacleBarsDrawn + 1]
 	cp   b
 	ret  z
 
 .paint:
-	ld   a, [wLabQtapBars]
-	ld   [wLabQtapBarsDrawn], a
-	ld   a, [wLabQtapBars + 1]
-	ld   [wLabQtapBarsDrawn + 1], a
+	ld   a, [wLabObstacleBars]
+	ld   [wLabObstacleBarsDrawn], a
+	ld   a, [wLabObstacleBars + 1]
+	ld   [wLabObstacleBarsDrawn + 1], a
 
-	ld   a, [wLabQtapBars + 1]
+	ld   a, [wLabObstacleBars + 1]
 	ld   h, a
-	ld   a, [wLabQtapBars]
+	ld   a, [wLabObstacleBars]
 	ld   l, a
 	call LabDigits4
-	ld   hl, QTAP_BARS_CELL
+	ld   hl, OBSTACLE_BARS_CELL
 	jp   LabPutDigits4

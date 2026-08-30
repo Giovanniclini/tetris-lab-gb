@@ -37,7 +37,7 @@ GREEN = {
 }
 
 (MODE_TETRIS, MODE_BTYPE, MODE_TRANSITION, MODE_CRUNCH,
- MODE_QCKTAP, MODE_SEED, MODE_MUSIC) = range(7)
+ MODE_OBSTACLE, MODE_SEED, MODE_MUSIC) = range(7)
 
 PICKER_CELL = 0x9800 + 6 * 32 + 16
 TILE_BLANK = 0x2F
@@ -107,10 +107,16 @@ def main():
 
     with Tetris("build/tetrislab.gb") as t:
         t.to_menu()
-        goto(t, MODE_QCKTAP, mode)
-        for _ in range(0x1A):                # right wall, ten rows tall
+        goto(t, MODE_OBSTACLE, mode)
+        # $1A is the right wall ten rows tall. Stepped until it reads that
+        # rather than counted: the row skips the heights no bar can cross, so a
+        # press count is not a value.
+        value = sym("wLabObstacle")
+        for _ in range(40):
+            if t[value] == 0x1A:
+                break
             t.press("right")
-        shoot(t, "qcktap-menu")
+        shoot(t, "obstacle-menu")
         t.press("start")
         t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
         while t[hATypeLevel] < 9:
@@ -125,7 +131,7 @@ def main():
             t.tick(1)
             t.pb.button_release("left")
             t.tick(3)
-        shoot(t, "qcktap")
+        shoot(t, "obstacle")
 
     with Tetris("build/tetrislab.gb") as t:
         t.to_menu()

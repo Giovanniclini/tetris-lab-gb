@@ -12,7 +12,7 @@ LabDrawScoreCarry::
 	ret  nz                         ; B-type has no score panel
 
 	ld   a, [wLabMode]
-	cp   MODE_QCKTAP
+	cp   MODE_OBSTACLE
 	ret  z                          ; that box is the tap rate there
 
 	ld   a, [wLabScoreMillions]

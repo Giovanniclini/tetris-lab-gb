@@ -11,10 +11,19 @@
 ; something to work around.
 ; --------------------------------------------------------------------------
 
-; Where the artwork puts the version: the last three cells before the box's
-; right edge, with the two before them left as the gap after "VERSION".
-DEF VERSION_CELL    EQU _SCRN0 + 11 * 32 + 13
-DEF VERSION_LEN     EQU 3
+; Where the artwork puts the version: five cells between "VERSION" and the box's
+; right edge, the last three of which held it while the number was one digit
+; either side of the dot.
+;
+; Derived from the string rather than written down, and right-aligned against
+; the edge, so a version that grows a character takes one of the gap cells
+; instead of the edge tile. Written down, `0.10` drew its last digit over the
+; edge and the box lost its right-hand side.
+DEF VERSION_EDGE    EQU 16                  ; the box's right edge, column 16
+DEF VERSION_LEN     EQU STRLEN(LAB_VERSION)
+DEF VERSION_CELL    EQU _SCRN0 + 11 * 32 + VERSION_EDGE - VERSION_LEN
+
+ASSERT VERSION_LEN <= 5, "the title screen leaves five cells for the version" 
 
 ; The cursor is the artwork's own: Tolstoj drew an arrow into the layout beside
 ; 1 PLAYER, so selecting a side is moving that tile rather than putting a sprite

@@ -223,9 +223,14 @@ def test_the_title_screen_shows_the_version_the_rom_carries():
     """The version is drawn over the artwork rather than stored in it, so a
     release bumps LAB_VERSION and nothing else - no new layout from the artist.
 
-    The artwork leaves five cells after "VERSION" and spends two on the gap, so
-    the constant has to be three characters. This asserts the two agree by
-    reading them out of the ROM's own string and off the screen.
+    The artwork leaves five cells between "VERSION" and the box's right edge at
+    column 16, and the number is right-aligned against that edge - so a version
+    that grows a character takes a gap cell rather than the edge tile. Written
+    down as column 13 rather than derived, `0.10` drew its last digit over the
+    edge and the box lost its right-hand side.
+
+    This asserts the ROM's string and the screen agree, wherever the string's
+    length puts it.
     """
     rom = (ROOT / "build" / "tetrislab.gb").read_bytes()
     syms = {}
@@ -238,17 +243,27 @@ def test_the_title_screen_shows_the_version_the_rom_carries():
     off = addr if bank == 0 else bank * 0x4000 + addr - 0x4000
     text_ = rom[off:off + 40].split(b"\x00")[0].decode()
     version = text_.split()[-1]
-    assert len(version) == 3, f"{version!r} is not three characters; the field is three cells"
+    assert len(version) <= 5, (
+        f"{version!r} is {len(version)} characters; the field is five cells"
+    )
 
+    EDGE, ROW = 16, 0x9800 + 11 * 32
     # 0-9 are tiles $00-$09 and "." is $24, so the cells are the string itself
     tile = {".": 0x24, **{str(d): d for d in range(10)}}
     want = [tile[c] for c in version]
     with Tetris(ROM) as t:
         t.to_title()
         t.tick(20)
-        got = [t[0x9800 + 11 * 32 + 13 + i] for i in range(3)]
+        first = EDGE - len(version)
+        got = [t[ROW + first + i] for i in range(len(version))]
         assert got == want, (
             f"the screen shows {got}, the ROM says {version} = {want}"
+        )
+        assert t[ROW + EDGE] == 0x91, (
+            "the version ran over the box's right edge"
+        )
+        assert t[ROW + first - 1] == 0x32, (
+            "the version is not right-aligned against the edge"
         )
 
 

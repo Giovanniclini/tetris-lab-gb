@@ -14,9 +14,10 @@ current.
 | 4 — Replay, tooling and polish | not started |
 | 5 — Hardware validation and 1.0 | not started |
 
-**Released:** `v0.5.0`, 2026-08-27 — Tolstoj's title screen with 1 PLAYER /
-2 PLAYER back, the score to 99 999 999, and the CRUNCH trainer. Still an alpha,
-and still ahead of the Milestone 2 gate below. BPS patch on
+**Released:** `v0.6.0`, 2026-08-30 — the QCKTAP trainer with a tap-rate readout,
+a mode name on every trainer's level select, and B while paused to leave a game
+for the level select. Still an alpha, and still ahead of the Milestone 2 gate
+below. BPS patch on
 [Releases](https://github.com/Giovanniclini/tetris-lab-gb/releases).
 
 **Seeds changed in `v0.4.0`.** They are six hex digits now, not four, and a seed
@@ -240,8 +241,13 @@ the eighth in.
 its value exactly.
 
 **Status 2026-08-29:** QCKTAP, the third trainer, matching TetrisGYM's mode and
-its value. The menu rows are single-spaced now, which fits about twelve — the
-list no longer gates the next trainer.
+its value, with the tap rate in the score box — HydrantDude's formula, as
+TetrisGYM computes it. The menu rows are single-spaced now, which fits about
+twelve, so the list no longer gates the next trainer.
+
+**Status 2026-08-30:** a trainer's level select says which trainer it is set up
+for, taken from the menu row's own string; and `B` while paused leaves a game
+for that level select, so changing level no longer means topping out on purpose.
 
 Work follows the revised list in `docs/community-research.md` §6.2:
 

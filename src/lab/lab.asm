@@ -13,7 +13,7 @@ INCLUDE "lab/levels.inc"
 ; screen's VERSION box from here, so a release bumps this line and nothing else.
 ; Three characters: the artwork leaves five cells and spends two of them on the
 ; gap after "VERSION", which is what keeps it reading as two words.
-DEF LAB_VERSION EQUS "\"0.5\""
+DEF LAB_VERSION EQUS "\"0.6\""
 
 ; ---------------------------------------------------------------------------
 ; The Lab, module by module.

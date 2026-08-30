@@ -10,7 +10,7 @@
 > **Status:** see [`docs/roadmap.md`](docs/roadmap.md).
 > Working today: the Lab menu, level select up to M, hearts, the transition, crunch and quick tap trainers, SPS and
 instant restart.
-> [**Get v0.5.0**](https://github.com/Giovanniclini/tetris-lab-gb/releases) — or see
+> [**Get v0.6.0**](https://github.com/Giovanniclini/tetris-lab-gb/releases) — or see
 > [Play it](#play-it).
 
 ---

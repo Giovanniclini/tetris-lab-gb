@@ -307,7 +307,7 @@ def test_every_mode_deals_the_same_sequence_for_a_seed():
     sequence that is only right in one mode is worse than no seed at all.
     """
     from tools.emu import GS_A_TYPE_SELECTION_MAIN, hATypeLevel
-    # QCKTAP is not here, and cannot be: it deals an I every time by design, so
+    # OBSTACLE is not here, and cannot be: it deals an I every time by design, so
     # its sequence is a constant rather than the seed's. The invariant it has to
     # keep instead is that it takes nothing from the generator - which it does
     # not, having replaced the generator's output rather than drawn from it.

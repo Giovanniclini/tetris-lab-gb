@@ -2,7 +2,7 @@
 ; The tap rate
 ;
 ; How fast you are tapping, in Hz, in the box the score usually has. Nothing
-; scores in QCKTAP - no line ever clears - so the panel is free, and the number
+; scores in OBSTACLE - no line ever clears - so the panel is free, and the number
 ; the drill is actually about is the one worth putting there.
 ;
 ; The formula is TetrisGYM's, which is HydrantDude's (src/modes/hz.asm):

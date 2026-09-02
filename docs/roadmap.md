@@ -14,7 +14,7 @@ current.
 | 4 — Replay, tooling and polish | not started |
 | 5 — Hardware validation and 1.0 | not started |
 
-**Released:** `v0.6.0`, 2026-08-30 — the QCKTAP trainer with a tap-rate readout,
+**Released:** `v0.6.0`, 2026-08-30 — a third trainer with a tap-rate readout,
 a mode name on every trainer's level select, and B while paused to leave a game
 for the level select. Still an alpha, and still ahead of the Milestone 2 gate
 below. BPS patch on
@@ -240,10 +240,12 @@ the eighth in.
 **Status 2026-08-27:** CRUNCH, the second trainer, matching TetrisGYM's mode and
 its value exactly.
 
-**Status 2026-08-29:** QCKTAP, the third trainer, matching TetrisGYM's mode and
-its value, with the tap rate in the score box — HydrantDude's formula, as
-TetrisGYM computes it. The menu rows are single-spaced now, which fits about
-twelve, so the list no longer gates the next trainer.
+**Status 2026-08-29:** OBSTACLE, the third trainer, matching TetrisGYM's mode
+and its value, with the tap rate in the score box — HydrantDude's formula, as
+TetrisGYM computes it. The column stops at fourteen rows: a standing bar is four
+rows, so anything taller cannot be crossed on an 18-row field. The menu rows are
+single-spaced now, which fits about twelve, so the list no longer gates the next
+trainer.
 
 **Status 2026-08-30:** a trainer's level select says which trainer it is set up
 for, taken from the menu row's own string; and `B` while paused leaves a game

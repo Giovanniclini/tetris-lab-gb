@@ -8,7 +8,7 @@
 > URL still redirects.
 
 > **Status:** see [`docs/roadmap.md`](docs/roadmap.md).
-> Working today: the Lab menu, level select up to M, hearts, the transition, crunch and quick tap trainers, SPS and
+> Working today: the Lab menu, level select up to M, hearts, the transition, crunch and obstacle trainers, SPS and
 instant restart.
 > [**Get v0.6.0**](https://github.com/Giovanniclini/tetris-lab-gb/releases) — or see
 > [Play it](#play-it).
@@ -191,18 +191,22 @@ leaves an empty row at the top — without that the board widens back out one cl
 Two people asked for this unprompted, and it is the only feature in
 [`docs/community-research.md`](docs/community-research.md) named twice.
 
-### Quick tap
+### Obstacle
 
-![Quick tap on the menu](./assets/screens/qcktap-menu.png)
-![Quick tap in play](./assets/screens/qcktap.png)
+![Obstacle on the menu](./assets/screens/obstacle-menu.png)
+![Obstacle in play](./assets/screens/obstacle.png)
 
 One column against one wall, a bar every time, and the board rebuilt for every piece. The drill is
 a single skill: stand the bar up and get it into the well beside the column before it lands, which
 past level 19 is a tap rather than a charge.
 
-**`1`–`$10` is the left wall that many rows tall, `$11`–`$20` the right.** The value is
-[TetrisGYM's](https://github.com/kirjavascript/TetrisGYM) own, and it shows in one cell the same
-way — the font runs `0`–`9` then `A`–`Z` from tile zero, so `$20` reads as `W`.
+**`1`–`$0E` is the left wall that many rows tall, `$11`–`$1E` the right.** The value is
+[TetrisGYM's](https://github.com/kirjavascript/TetrisGYM) own — they call the mode `QCKTAP` — and it
+shows in one cell the same way, the font running `0`–`9` then `A`–`Z` from tile zero.
+
+Fourteen rows rather than their sixteen, and that is the same rule rather than a different one: a
+standing bar is four rows, so it can only cross the column if the column's top is at row 4 or below.
+Sixteen leaves exactly those four rows on a 20-row field. Ours is 18 rows.
 
 Nothing scores here and no line ever clears, so **both panels say something useful instead**:
 

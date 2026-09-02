@@ -109,12 +109,12 @@ wLabCrunch::      db        ; CRUNCH's width, TetrisGYM's own value: every 4 is
                            ; a column off the left, every 1 off the right
 wLabCrunchPending:: db     ; set at game init, consumed on the first game frame
 wLabCrunchRowsToSend:: db  ; rows of the crunch columns still to reach the screen
-wLabQtap::        db        ; QCKTAP's column, TetrisGYM's own value: 1-$10 is
+wLabObstacle::        db        ; OBSTACLE's column, TetrisGYM's own value: 1-$10 is
                            ; the left wall that many rows tall, $11-$20 the right
-wLabQtapPending:: db       ; set at game init, consumed on the first game frame
-wLabQtapWasSettling:: db   ; last frame's hPieceFallingState, to catch the edge
+wLabObstaclePending:: db       ; set at game init, consumed on the first game frame
+wLabObstacleWasSettling:: db   ; last frame's hPieceFallingState, to catch the edge
                            ; back to NONE that means a new piece
-wLabQtapRowsToSend:: db    ; rows of the rebuilt board still to reach the screen
+wLabObstacleRowsToSend:: db    ; rows of the rebuilt board still to reach the screen
 
 ; Tap rate. See hz.asm - the window, the arithmetic scratch, and what is on
 ; screen so it is only repainted on change.
@@ -126,12 +126,12 @@ wLabHzValue::    dw        ; hz x 100, binary
 wLabHzDrawn::    dw
 wLabHzProd::     ds 3
 
-; Scratch for LabDigits4, which QCKTAP's bar count shares with the rate.
+; Scratch for LabDigits4, which OBSTACLE's bar count shares with the rate.
 wLabDigits::     ds 4
 
 ; Bars that have landed since the drill started, and what is on screen.
-wLabQtapBars::      dw
-wLabQtapBarsDrawn:: dw
+wLabObstacleBars::      dw
+wLabObstacleBarsDrawn:: dw
 
 ; The controller as the player actually held it, before LabSuppressPushdown
 ; edits it. Anything that wants to *show* the input - toni asked for an input

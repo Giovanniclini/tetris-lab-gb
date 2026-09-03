@@ -146,6 +146,22 @@ class Tetris:
         self.tick(20)
         return self
 
+    def to_mode(self, mode, limit=20):
+        """The Lab menu row that selects `mode`.
+
+        Driven by what wLabMode says rather than by a press count: the list is
+        Tolstoj's layout, so its row order is his and has nothing to do with the
+        mode numbering - and section headers sit between the entries.
+        """
+        addr = sym("wLabMode")
+        if self.state != GS_GAME_TYPE_MAIN:
+            self.to_menu()
+        for _ in range(limit):
+            if self[addr] == mode:
+                return self
+            self.press("down")
+        raise AssertionError(f"never reached mode {mode} from the menu")
+
     def to_level_select(self, hearts=False):
         """Lab menu -> TETRIS -> the A-TYPE level select.
 
@@ -165,6 +181,10 @@ class Tetris:
             self.press("start")                   # 1 PLAYER, or past the title
         self.run_until_state(GS_GAME_TYPE_MAIN)
         self.tick(20)
+        # The Lab menu opens on its first row, which is a setting rather than a
+        # mode - the list is Tolstoj's layout and TETRIS is not the top of it.
+        if self.is_lab:
+            self.to_mode(0)                       # MODE_TETRIS
         self.press("start")                       # TETRIS, or A-TYPE
         self.run_until_state(GS_A_TYPE_SELECTION_MAIN)
         self.tick(20)             # the picker defers its first paint a frame

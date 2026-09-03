@@ -192,9 +192,7 @@ def test_the_mode_you_played_is_on_screen_while_you_type_your_name():
 
     def header(row):
         with Tetris(ROM) as t:
-            t.to_menu()
-            for _ in range(row):
-                t.press("down")
+            t.to_mode(row)
             t.press("start")
             t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
             t.tick(20)
@@ -291,8 +289,7 @@ def test_b_type_name_entry_is_left_alone():
 
     with Tetris(ROM) as t:
         t.to_menu()
-        for _ in range(MODE_BTYPE):
-            t.press("down")
+        t.to_mode(MODE_BTYPE)
         t.press("start")
         t.run_until(lambda: t.state == GS_B_TYPE_SELECTION_MAIN,
                     what="the B-type level select")

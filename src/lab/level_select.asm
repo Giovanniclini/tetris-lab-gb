@@ -9,6 +9,8 @@
 ; --------------------------------------------------------------------------
 
 LabLevelSelectInit::
+	call LabLoadScreenGfx
+
 ; File the score first, while hATypeLevel still says the level that was played.
 ; Ours rather than the original's, because a seventh digit changes the ranking.
 ; It leaves wScoreBCD zeroed either way, so the original's own call a moment
@@ -256,23 +258,67 @@ LabPaintFields::
 ; level field
 	ld   a, [wLabPickerLevel]
 	ld   b, FOCUS_LEVEL
-	call LabBlankIfFocused
+	call LabShadeForFocus
 	ld   [PICKER_CELL], a
 
 	ret
 
 
-; A = TILE_BLANK when field B has focus and the blink is off, else A unchanged.
-LabBlankIfFocused::
+; The tileset this screen draws in, and the light alphabet that goes with it.
+;
+; GameState08_GameMusicTypeInit ($1452) was the only place in the ROM that
+; loaded this tileset; every screen after it inherited. The Lab menu replaced
+; that screen and loads Tolstoj's artwork instead, so each screen downstream
+; fetches its own now. Doing it here rather than on the way out of the menu is
+; what keeps a swapped tileset from ever being displayed: the original's init
+; turns the LCD off a moment from now, and this opens the same window early
+; rather than a second one in between.
+;
+; The LCD stays off. Its init is entered past its own TurnOffLCD - see
+; LAB_SKIP_TURN_OFF_LCD in dispatch.asm - so this window and that one are the
+; same window, and nothing is ever displayed between the swap and the redraw.
+LabLoadScreenGfx::
+	ld   b, BANK(LabLoadGfx)
+	ld   hl, LabLoadGfx             ; turns the LCD off, then loads the tileset
+	call FarCall
+
+; And the scroll the menu left behind. VBlank used to zero it every frame and no
+; longer does (deviation #23), so this screen would inherit whatever the list
+; was scrolled to - every screen but the menu is drawn expecting none.
+;
+; Here rather than on the way out of the menu, because there it would happen
+; with the LCD on: the list jumps to its top for a frame or two before going
+; dark, which is a flash you only see when you launch a row far enough down to
+; have scrolled. Reported by Giovanni, entering OBSTACLE.
+	xor  a
+	ldh  [rSCY], a
+
+	jp   LabMakeBrightFont
+
+
+; A = a glyph, B = a field. Returns the tile to draw it with: blank while B has
+; focus and the blink is off, the light alphabet while it does not, and A as it
+; came in otherwise.
+LabShadeForFocus::
 	push af
+	ld   a, [wLabFocus]
+	cp   b
+	jr   nz, .notFocused
+
 	ld   a, [wLabBlinkPhase]
 	and  a
 	jr   nz, .keep                  ; blink on: draw normally
-	ld   a, [wLabFocus]
-	cp   b
-	jr   nz, .keep
 	pop  af
 	ld   a, TILE_BLANK
+	ret
+
+; The field the cursor is not on. It still says what the level is, so it stays
+; readable - in the light alphabet, which is how the menu says the same thing
+; about a value you are not editing. The grid does this with its own cursor:
+; the digits sit there and only the selected one flashes.
+.notFocused:
+	pop  af
+	add  LAB_BRIGHT
 	ret
 
 .keep:

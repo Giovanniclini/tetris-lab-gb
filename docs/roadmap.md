@@ -247,6 +247,11 @@ rows, so anything taller cannot be crossed on an 18-row field. The menu rows are
 single-spaced now, which fits about twelve, so the list no longer gates the next
 trainer.
 
+**Status 2026-09-03:** the menu is Tolstoj's scrolling list — sections, menu DAS
+and a blinking value, on his layout and his tileset. It cost one byte of bank 0:
+VBlank zeroed the scroll register every frame, so nothing could scroll at all
+(`docs/decisions/0013`).
+
 **Status 2026-08-30:** a trainer's level select says which trainer it is set up
 for, taken from the menu row's own string; and `B` while paused leaves a game
 for that level select, so changing level no longer means topping out on purpose.

@@ -29,9 +29,7 @@ MODE_TETRIS, MODE_CRUNCH = 0, 3
 def start(value, mode=MODE_CRUNCH, ticks=90):
     """A game running, with CRUNCH set to `value`."""
     t = Tetris(ROM)
-    t.to_menu()
-    for _ in range(mode):
-        t.press("down")
+    t.to_mode(mode)
     t.pb.memory[wLabCrunch] = value
     t.press("start")
     t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
@@ -77,9 +75,7 @@ def test_the_row_counts_the_way_their_readme_says():
     sentence can also be read as the right wrapping without the carry.
     """
     with Tetris(ROM) as t:
-        t.to_menu()
-        for _ in range(MODE_CRUNCH):
-            t.press("down")
+        t.to_mode(MODE_CRUNCH)
         seen = [t[wLabCrunch]]
         for _ in range(16):
             t.press("right")

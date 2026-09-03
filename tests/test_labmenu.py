@@ -31,9 +31,16 @@ MUSIC_A, MUSIC_OFF = 0x1C, 0x1F
 
 MODE_TETRIS, MODE_BTYPE, MODE_TRANSITION = 0, 1, 2
 MODE_CRUNCH, MODE_OBSTACLE = 3, 4
+
 MODE_SEED, MODE_MUSIC = 5, 6
+# Which map row each mode's entry is drawn on, from Tolstoj's layout.
+MENU_MAP_ROWS = {MODE_MUSIC: 8, MODE_TETRIS: 14, MODE_BTYPE: 15,
+                 MODE_SEED: 19, MODE_TRANSITION: 24, MODE_CRUNCH: 25,
+                 MODE_OBSTACLE: 26}
+
 
 wLabMode = sym("wLabMode")
+wLabMenuRow = sym("wLabMenuRow")
 hIs2Player = 0xFFC5
 
 TILE_BLANK = 0x2F
@@ -69,13 +76,18 @@ def to_menu_row(t, row):
     return goto_row(t, row)
 
 
-def goto_row(t, row):
-    """Move the cursor to a row from wherever it currently is."""
-    for _ in range(MODE_MUSIC + 1):
-        if t[wLabMode] == row:
+def goto_row(t, mode):
+    """Move the cursor to the row that selects `mode`.
+
+    Down only, and wrapping: the list is Tolstoj's layout, so its row order is
+    his and has nothing to do with the mode numbering - "is my mode above or
+    below yours" is not a question the numbers can answer any more.
+    """
+    for _ in range(20):
+        if t[wLabMode] == mode:
             return t
-        t.press("down" if t[wLabMode] < row else "up")
-    raise AssertionError(f"stuck on row {t[wLabMode]} heading for {row}")
+        t.press("down")
+    raise AssertionError(f"never reached mode {mode} from the menu")
 
 
 def test_boot_reaches_the_title_without_the_copyright_wait():
@@ -138,6 +150,7 @@ def test_the_menu_starts_its_music():
         assert songs, "the menu asked for no music at all"
 
         songs.clear()
+        t.to_mode(MODE_TETRIS)
         t.press("start")
         t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
         t.tick(20)
@@ -208,15 +221,21 @@ def test_screens_downstream_of_the_title_get_the_menu_tileset():
     want = rom[off:off + 16]
 
     with Tetris(ROM) as t:
-        t.to_menu()                       # via the title screen, which clobbers $30
-        got = bytes(t[0x8000 + 0x30 * 16 + i] for i in range(16))
-        assert got == want, "the menu is showing the title screen's tiles"
-
-        t.press("start")                  # TETRIS -> the level select
+        # The menu is a screen with artwork of its own now - Tolstoj's sheet,
+        # from $27 up, the same slot the title screen's uses. What has to hold
+        # is that everything downstream of it puts the menu tileset back.
+        t.to_mode(MODE_TETRIS)
+        t.press("start")                  # -> the level select
         t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
         t.tick(20)
         got = bytes(t[0x8000 + 0x30 * 16 + i] for i in range(16))
-        assert got == want, "the level select is showing the title screen's tiles"
+        assert got == want, "the level select is showing another screen's tiles"
+
+        t.press("start")                  # -> the game
+        t.run_until_state(GS_IN_GAME_MAIN)
+        t.tick(20)
+        got = bytes(t[0x8000 + 0x30 * 16 + i] for i in range(16))
+        assert got == want, "the game is showing another screen's tiles"
 
 
 def test_the_title_screen_shows_the_version_the_rom_carries():
@@ -283,7 +302,12 @@ def test_the_menu_borrows_the_originals_arrow_for_its_cursor():
         t.to_menu()
         got = bytes(t[0x8000 + 0xFF * 16 + i] for i in range(16))
         assert got == want, "the menu has no arrow tile"
-        assert t[0x9800 + 6 * 32 + 3] == 0xFF, "the menu cursor is not the arrow"
+
+        # A sprite, not a cell in the map. The list scrolls under the cursor, so
+        # a background arrow would scroll with it and would have to be erased
+        # and redrawn on every move.
+        assert t[0xFE02] == 0xFF, "the menu cursor sprite is not the arrow"
+        assert t[0xFE00] != 0, "the menu cursor sprite is hidden"
 
 
 def test_the_title_screen_has_exactly_one_cursor():
@@ -378,23 +402,475 @@ def test_b_from_the_level_select_returns_to_the_menu():
 def test_the_menu_replaces_the_game_type_screen():
     with Tetris(ROM) as t:
         to_menu(t)
-        rows = [text(t, r) for r in range(18)]
+        # The whole map, not the visible window: the list is 32 rows and the
+        # TRAINING section is below the fold until you scroll to it.
+        rows = [text(t, r) for r in range(32)]
         joined = "\n".join(rows)
-        for want in ("TETRIS LAB", "TETRIS", "B-TYPE",
-                     "TRANSITION", "SEED", "MUSIC"):
+        for want in ("TETRIS", "LAB", "B-TYPE", "STANDARD", "COMPETITION",
+                     "TRAINING", "TRANSITION", "SEED", "MUSIC"):
             assert want in joined, f"{want!r} missing from the menu:\n{joined}"
         assert "PLAYER" not in joined, (
             "2 PLAYER belongs on the title screen, not the menu")
 
 
-def test_the_cursor_moves_and_wraps():
+def test_the_list_scrolls_once_the_selection_passes_the_middle():
+    """The list is 32 rows and the screen shows 18, so it has to move under the
+    cursor. Nothing scrolls while the selection is in the top half; below that
+    the selected row is pinned to the anchor and the map slides instead.
+
+    This only works because VBlank no longer zeroes the scroll register every
+    frame - see deviation #23. Without that hook the cursor pins correctly and
+    the picture never moves, which is exactly how the need for it showed.
+    """
+    ANCHOR, rSCY = 15, 0xFF42
     with Tetris(ROM) as t:
         to_menu(t)
-        assert t[wLabMode] == MODE_TETRIS, "should open on the first row"
+        seen = []
+        for _ in range(len(MENU_MAP_ROWS)):
+            row = MENU_MAP_ROWS[t[wLabMode]]
+            want = max(0, row - ANCHOR) * 8
+            seen.append((row, t[rSCY], want))
+            t.press("down")
+
+    for row, got, want in seen:
+        assert got == want, f"map row {row}: SCY {got}, wanted {want}"
+    assert any(s for _, s, _ in seen), "nothing ever scrolled"
+
+
+def test_the_cursor_follows_the_selection_down_the_screen():
+    """The arrow is a sprite, so it has to be placed against the scroll rather
+    than drawn into the row. Once the list is scrolling it stops moving and the
+    map moves instead."""
+    ANCHOR, rSCY = 15, 0xFF42
+    with Tetris(ROM) as t:
+        to_menu(t)
+        for _ in range(len(MENU_MAP_ROWS)):
+            row = MENU_MAP_ROWS[t[wLabMode]]
+            want = (row * 8 - t[rSCY]) + 16       # OAM counts from off the edge
+            assert t[0xFE00] == want, (
+                f"map row {row}: cursor at Y {t[0xFE00]}, wanted {want}"
+            )
+            assert t[0xFE00] <= ANCHOR * 8 + 16, "the cursor ran off the anchor"
+            t.press("down")
+
+
+def test_the_rows_with_nothing_behind_them_are_blank_and_unreachable():
+    """Tolstoj's layout draws HZ-DISPLAY, INPUTS, LINE CAP and ELEVATED. None of
+    them exists yet, and a row you can see and cannot reach reads as broken - so
+    they are wiped at init and left out of the entry table."""
+    UNBUILT = (9, 10, 20, 27)
+    with Tetris(ROM) as t:
+        to_menu(t)
+        for row in UNBUILT:
+            # Columns 1-18: the box's own sides at 0 and 19 stay.
+            inside = text(t, row, range(1, 19))
+            assert inside.strip() == "", (
+                f"map row {row} still reads {inside!r}"
+            )
+
+        reached = {t[wLabMode]}
+        for _ in range(30):
+            t.press("down")
+            reached.add(t[wLabMode])
+        assert len(reached) == len(MENU_MAP_ROWS), (
+            f"the cursor reached {sorted(reached)}"
+        )
+
+
+def test_the_list_auto_repeats():
+    """A twelve-row list is unusable without it. Tolstoj's values: a fresh press
+    acts at once, then 24 frames before it repeats and 8 between repeats."""
+    with Tetris(ROM) as t:
+        to_menu(t)
+        start = t[wLabMode]
+        t.hold("down")
+        t.tick(1)
+        assert t[wLabMode] != start, "a fresh press should act immediately"
+
+        moved = t[wLabMode]
+        t.tick(20)
+        assert t[wLabMode] == moved, "it repeated before the initial delay"
+        t.tick(8)
+        assert t[wLabMode] != moved, "it never repeated"
+        t.release("down")
+
+
+def test_leaving_the_menu_takes_the_scroll_with_it():
+    """VBlank used to clear the scroll register every frame and no longer does,
+    so a screen entered from a scrolled list would inherit the scroll. Every
+    other screen is drawn expecting none."""
+    rSCY = 0xFF42
+    with Tetris(ROM) as t:
+        to_menu(t)
+        goto_row(t, MODE_OBSTACLE)
+        assert t[rSCY], "the list should be scrolled on the last row"
+        goto_row(t, MODE_TETRIS)
+        t.press("start")
+        t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+        t.tick(20)
+        assert t[rSCY] == 0, f"the level select inherited SCY {t[rSCY]}"
+
+
+BRIGHT = 0xC6                   # the bright alphabet, one plane lighter
+
+
+def test_the_bright_alphabet_lands_where_no_screen_draws():
+    """It is a copy of the font written straight into VRAM, so it destroys
+    whatever tiles it lands on. $A0 looked free from the menu, the level select
+    and the game - and was not: the game over screen underlines GAME and OVER
+    with $AD, and those two words grew a row of faint Ds. Reported by Giovanni.
+
+    So the screens are walked and asked, rather than three of them being checked
+    by hand and the rest assumed.
+    """
+    used = set()
+
+    def collect(t, skip=()):
+        """Every cell of the map, minus the ones the Lab paints in the bright
+        alphabet itself - a value blinking is not a collision with it."""
+        for r in range(32):
+            for c in range(32):
+                if (r, c) in skip:
+                    continue
+                used.add(t[0x9800 + r * 32 + c])
+
+    # The menu's value columns and the level select's picker are where the Lab
+    # draws bright glyphs on purpose.
+    VALUES = {(r, c) for r in range(32) for c in range(13, 19)}
+    PICKER = {(6, 16)}
+
+    with Tetris(ROM) as t:
+        t.to_title()
+        t.tick(20)
+        collect(t)
+        to_menu(t)
+        collect(t, VALUES)
+
+        goto_row(t, MODE_BTYPE)
+        t.press("start")
+        t.run_until_state(GS_B_TYPE_SELECTION_MAIN)
+        t.tick(20)
+        collect(t)
+        t.press("b")
+        t.run_until_state(GS_GAME_TYPE_MAIN)
+        t.tick(20)
+
+        goto_row(t, MODE_TETRIS)
+        t.press("start")
+        t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+        t.tick(20)
+        collect(t, PICKER)
+        t.press("start")
+        t.run_until_state(GS_IN_GAME_MAIN)
+        t.tick(60)
+        collect(t)
+
+        t.pb.memory[0xFFE1] = 0x0D                  # game over
+        t.run_until(lambda: t.state == 0x04, what="the game over screen")
+        t.tick(40)
+        collect(t)
+        t.press("start")
+        t.run_until(lambda: t.state in (0x11, 0x15), what="what follows it")
+        t.tick(30)
+        collect(t, PICKER)
+
+    # Read out of the ROM, not duplicated here: the first version of this test
+    # carried its own copy of the offset and passed against the wrong range
+    # while the ROM's had moved.
+    rom = (ROOT / "build" / "tetrislab.gb").read_bytes()
+    syms = {}
+    for line in (ROOT / "build" / "tetrislab.sym").read_text().splitlines():
+        parts = line.split()
+        if len(parts) == 2 and ":" in parts[0]:
+            bank, addr = parts[0].split(":")
+            syms.setdefault(parts[1], (int(bank, 16), int(addr, 16)))
+    bank, addr = syms["LabBrightBase"]
+    base = rom[addr if bank == 0 else bank * 0x4000 + addr - 0x4000]
+
+    block = range(base, base + 0x26)
+    clash = sorted(v for v in used if v in block)
+    assert not clash, (
+        f"the bright alphabet at ${base:02X} sits on tiles the game draws: "
+        f"{[hex(v) for v in clash]}"
+    )
+
+
+def test_the_bright_alphabet_is_the_dark_one_with_a_plane_cleared():
+    """Tolstoj's trick, and it costs no artwork: a tile row is two bytes, the
+    low bitplane then the high one, so keeping the first and zeroing the second
+    leaves the glyph in the light shade instead of the darkest."""
+    with Tetris(ROM) as t:
+        to_menu(t)
+        for tile in (0x00, 0x05, 0x0A, 0x19, 0x25):     # digits, letters, dash
+            dark = [t[0x8000 + tile * 16 + i] for i in range(16)]
+            lit = [t[0x8000 + (BRIGHT + tile) * 16 + i] for i in range(16)]
+            assert lit[0::2] == dark[0::2], f"tile ${tile:02X} lost its glyph"
+            assert set(lit[1::2]) == {0}, f"tile ${tile:02X} kept both planes"
+
+
+def test_only_the_selected_rows_value_blinks():
+    """The label stays put and every other row stays dark, so leaving a row puts
+    its value back to black by itself - the next frame paints it dark."""
+    VALUES = {MODE_TRANSITION: 24, MODE_CRUNCH: 25, MODE_OBSTACLE: 26}
+    with Tetris(ROM) as t:
+        to_menu(t)
+        goto_row(t, MODE_CRUNCH)
+        seen = {row: set() for row in VALUES.values()}
+        labels = set()
+        for _ in range(40):
+            t.tick(1)
+            for row in VALUES.values():
+                seen[row].add(t[0x9800 + row * 32 + 13])
+            labels.add(text(t, 25, range(2, 12)))
+
+        assert len(seen[25]) == 2, f"CRUNCH's value did not blink: {seen[25]}"
+        assert any(v >= BRIGHT for v in seen[25]), "it blinked, but not bright"
+        for row in (24, 26):
+            assert all(v < BRIGHT for v in seen[row]), (
+                f"map row {row} blinked and it is not the selected one"
+            )
+        assert len(labels) == 1, f"the label blinked too: {labels}"
+
+
+def test_only_the_seed_digit_being_edited_blinks():
+    """The whole value pulsing would lose the digit you are changing inside it."""
+    with Tetris(ROM) as t:
+        to_menu(t)
+        goto_row(t, MODE_SEED)
+        t.press("a")
+        seen = set()
+        for _ in range(40):
+            t.tick(1)
+            seen.add(tuple(t[0x9800 + 19 * 32 + 13 + i] for i in range(6)))
+
+        assert len(seen) == 2, f"the seed row did not blink: {seen}"
+        first = {row[0] for row in seen}
+        rest = {v for row in seen for v in row[1:]}
+        assert any(v >= BRIGHT for v in first), "the active digit stayed dark"
+        assert all(v < BRIGHT for v in rest), "a digit other than the active one blinked"
+
+
+def test_the_music_row_spells_its_value_out():
+    """Six cells, because the layout gives the row six. A single letter beside a
+    baked "-TYPE" is only right by accident - it read "--TYPE" with music off."""
+    with Tetris(ROM) as t:
+        to_menu(t)
+        got = []
+        for _ in range(4):
+            # Read from another row: on MUSIC the value is blinking, and half
+            # the frames it is in the bright alphabet.
+            goto_row(t, MODE_TETRIS)
+            got.append(text(t, 8, range(13, 19)))
+            goto_row(t, MODE_MUSIC)
+            t.press("right")
+        assert got == ["A-TYPE", "B-TYPE", "C-TYPE", "OFF"], got
+
+
+def test_only_glyphs_are_brightened():
+    """The bright block is a copy of the font and stops where the font does, so
+    shifting anything else into it lands on whatever tile sits at that index.
+    MUSIC pads "OFF" out to six cells with blanks, and each of those blinked
+    into a different piece of the artwork. Reported by Giovanni.
+    """
+    FONT_TILES, BLANK = 0x26, 0x2F
+    with Tetris(ROM) as t:
+        to_menu(t)
+        goto_row(t, MODE_MUSIC)
+        for _ in range(3):
+            t.press("right")              # A -> B -> C -> OFF
+
+        seen = set()
+        for _ in range(40):
+            t.tick(1)
+            seen.add(tuple(t[0x9800 + 8 * 32 + 13 + i] for i in range(6)))
+
+        assert len(seen) == 2, f"OFF did not blink: {seen}"
+        for row in seen:
+            for cell in row:
+                ok = (cell < FONT_TILES                       # a glyph
+                      or BRIGHT <= cell < BRIGHT + FONT_TILES  # a bright glyph
+                      or cell == BLANK)
+                assert ok, f"${cell:02X} is none of those: {row}"
+            assert row[3:] == (BLANK, BLANK, BLANK), (
+                f"the padding was brightened: {row}"
+            )
+
+
+def test_the_menu_comes_back_where_you_left_it():
+    """The loop is "set it up, try it, come back and change it", so starting
+    from the top of a twelve-row list every time makes its length the price of
+    that. The row survives in WRAM and the scroll is derived from it, so the
+    cursor and the view come back together.
+
+    A cold boot zeroes the row, which is the first entry - asserted here too,
+    because "remembers where it was" must not mean "opens somewhere arbitrary".
+    """
+    rSCY = 0xFF42
+    with Tetris(ROM) as t:
+        to_menu(t)
+        assert t[wLabMode] == MODE_MUSIC, "a fresh boot should open on the first row"
+        assert t[rSCY] == 0, "and unscrolled"
+
+        for mode in (MODE_OBSTACLE, MODE_CRUNCH, MODE_TETRIS):
+            goto_row(t, mode)
+            was = (t[wLabMenuRow], t[rSCY], t[0xFE00])
+            t.press("start")
+            t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
+            t.tick(20)
+            assert t[rSCY] == 0, "the level select inherited the menu's scroll"
+
+            t.press("b")                        # back to the menu
+            t.run_until_state(GS_GAME_TYPE_MAIN)
+            t.tick(20)
+            now = (t[wLabMenuRow], t[rSCY], t[0xFE00])
+            assert now == was, (
+                f"mode {mode}: left on row/SCY/cursor {was}, came back to {now}"
+            )
+
+
+def test_launching_shows_no_screen_in_between():
+    """Reported by Giovanni: "it flashes a screen that i cannot recognise".
+
+    The tileset changes on the way to the level select, and for one lit frame
+    the menu's own map was still up underneath it - the list drawn in the level
+    select's alphabet. Every fix short of the right one moved that frame rather
+    than removing it: blanking the map hid it, and loading the tileset one state
+    later moved it out of the window the first version of this test watched.
+
+    So the frames are watched all the way to the destination, and the property
+    is that map and tiles never disagree: while the menu's layout is on screen
+    the menu's tileset is loaded, or the screen is dark.
+    """
+    LCDCF_ON = 0x80
+    for mode, state in ((MODE_TETRIS, GS_A_TYPE_SELECTION_MAIN),
+                        (MODE_BTYPE, GS_B_TYPE_SELECTION_MAIN),
+                        (MODE_OBSTACLE, GS_A_TYPE_SELECTION_MAIN)):
+        with Tetris(ROM) as t:
+            to_menu(t)
+            goto_row(t, mode)
+            menu = bytes(t[0x8000 + 0x30 * 16 + i] for i in range(16))
+            scroll = t[0xFF42]
+            # Pressed by hand rather than with press(), which ticks four frames
+            # of its own - the jump happens on the first of them, and an earlier
+            # version of this test started watching after it.
+            t.pb.button_press("start")
+
+            for _ in range(90):
+                t.tick(1)
+                if t[0xFF40] & LCDCF_ON:
+                    tiles = bytes(t[0x8000 + 0x30 * 16 + i] for i in range(16))
+                    menus_map = "STANDARD" in text(t, 12)
+                    assert menus_map == (tiles == menu), (
+                        f"mode {mode}: a lit frame had "
+                        + ("the menu's map under another screen's tiles"
+                           if menus_map
+                           else "the menu's tileset under another screen's map")
+                    )
+                    # And the view does not jump before it goes dark. Resetting
+                    # the scroll for the next screen while this one is still lit
+                    # snaps the list to its top - only visible from a row far
+                    # enough down to have scrolled, which is why it outlived
+                    # three passes at this test.
+                    if menus_map:
+                        assert t[0xFF42] == scroll, (
+                            f"mode {mode}: the list jumped from SCY {scroll} "
+                            f"to {t[0xFF42]} while still on screen"
+                        )
+                if t.state == state:
+                    break
+            else:
+                raise AssertionError(f"mode {mode}: never reached ${state:02X}")
+            t.pb.button_release("start")
+
+
+def test_the_menu_has_exactly_one_cursor():
+    """Tolstoj draws the cursor into his layouts - on the title screen the
+    artwork's own arrow is the cursor and there is no sprite. Here it sits baked
+    at the MUSIC row and cannot move, because the list scrolls under the cursor
+    and a cell in the map scrolls with the list. Two arrows, one of them inert.
+
+    Reported by Giovanni: "There is a fixed > that stays at Music and does not
+    move." The title screen had the same bug, from the same cause.
+    """
+    TILE_CURSOR, COL = 0x58, 1
+    with Tetris(ROM) as t:
+        to_menu(t)
+        drawn = [r for r in range(32)
+                 if t[0x9800 + r * 32 + COL] == TILE_CURSOR]
+        assert not drawn, f"the map still draws a cursor on rows {drawn}"
+
+        # And the sprite sits in that column rather than on the label, which is
+        # what the second arrow overlapped. His X is already an OAM coordinate.
+        for mode in (MODE_MUSIC, MODE_TETRIS, MODE_OBSTACLE):
+            goto_row(t, mode)
+            assert t[0xFE01] == 0x10, (
+                f"mode {mode}: cursor at OAM X {t[0xFE01]}, wanted $10"
+            )
+
+
+def test_the_menu_draws_in_its_own_tileset():
+    """The layout indexes 44 tiles of Tolstoj's artwork above the font - the box,
+    the frame, the section rules. Every tileset shares the alphabet, so a menu
+    without his sheet reads back perfectly from the tilemap and is drawn entirely
+    in the wrong furniture. That is how it shipped to Giovanni: "the menu scrolls
+    but it's full of garbage"."""
+    sheet = (ROOT / "build" / "obj" / "build" / "labMenuTiles.2bpp").read_bytes()
+    layout = (ROOT / "src" / "lab" / "data" / "labMenuMap.bin").read_bytes()
+    art = sorted({v for v in layout if v > 0x25})
+    assert len(art) > 40, f"only {len(art)} artwork tiles - did the layout change?"
+
+    FIRST = 0x27
+    with Tetris(ROM) as t:
+        to_menu(t)
+        for tile in art:
+            off = (tile - FIRST) * 16
+            want = sheet[off:off + 16]
+            got = bytes(t[0x8000 + tile * 16 + i] for i in range(16))
+            assert got == want, f"tile ${tile:02X} is not the menu's own"
+
+
+def test_both_level_selects_load_their_own_tileset():
+    """GameState08_GameMusicTypeInit ($1452) was the only place in the ROM that
+    loaded this tileset, and every screen after it inherited. The Lab menu
+    replaced that screen and loads Tolstoj's artwork instead, so each screen
+    downstream has to fetch its own - B-type's level select is hooked for
+    nothing else.
+
+    And the LCD goes back on with it: loading a tileset turns it off, and the
+    original's init opens with TurnOffLCD, which waits for a VBlank an already
+    dark LCD will never send. That hung the level select's init with a black
+    screen and nothing to say why.
+    """
+    want = None
+    with Tetris(ROM) as t:
+        to_menu(t)
+        for mode, state in ((MODE_TETRIS, GS_A_TYPE_SELECTION_MAIN),
+                            (MODE_BTYPE, GS_B_TYPE_SELECTION_MAIN)):
+            goto_row(t, mode)
+            t.press("start")
+            t.run_until_state(state)
+            t.tick(20)
+            got = bytes(t[0x8000 + 0x30 * 16 + i] for i in range(16))
+            if want is None:
+                want = got
+            assert got == want, f"mode {mode} kept the menu's tiles"
+            assert t[0xFF40] & 0x80, "the LCD never came back on"
+            t.press("b")                    # back to the menu for the next one
+            t.run_until_state(GS_GAME_TYPE_MAIN)
+            t.tick(20)
+
+
+def test_the_cursor_moves_and_wraps():
+    """The list opens on its first row, which is MUSIC - Tolstoj's layout puts
+    the settings above the modes - and wraps at both ends onto OBSTACLE, which
+    is the last entry rather than the last mode number."""
+    with Tetris(ROM) as t:
+        to_menu(t)
+        assert t[wLabMode] == MODE_MUSIC, "should open on the first row"
         t.press("up")
-        assert t[wLabMode] == MODE_MUSIC, "Up from the first row should wrap"
+        assert t[wLabMode] == MODE_OBSTACLE, "Up from the first row should wrap"
         t.press("down")
-        assert t[wLabMode] == MODE_TETRIS, "Down from the last row should wrap"
+        assert t[wLabMode] == MODE_MUSIC, "Down from the last row should wrap"
 
 
 def test_tetris_launches_the_a_type_level_select():

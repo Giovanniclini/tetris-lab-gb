@@ -33,10 +33,12 @@ ALLOWED_RANGES = [
     (0x01F2, 0x01F2, "HOOK_SCORE_CELLS - score drawn one cell right, screen 1"),
     (0x23AD, 0x23AD, "HOOK_SCORE_CELLS - score drawn one cell right, screen 1"),
     (0x23C6, 0x23C6, "HOOK_SCORE_CELLS - score drawn one cell right, screen 0"),
+    (0x0203, 0x0203, "HOOK_VBLANK_SCY - VBlank stops zeroing the scroll register"),
     (0x0178, 0x017A, "HOOK_SCORE_CAP - the 999,999 clamp redirected to a carry handler"),
     (0x7FF6, 0x7FFF, "LAB_BANK1_GFX - the menu tileset thunk, in the gap past the sound thunks"),
     (0x6430, 0x644F, "LAB_BANK1_THUNK - the score carry handler, reached during gameplay"),
     (0x030F, 0x0310, "HOOK_STATE_TABLE_0A - in-game init routed via the Lab"),
+    (0x031F, 0x0320, "HOOK_STATE_TABLE_12 - B-type level select, for its tileset"),
     (0x031B, 0x031E, "HOOK_STATE_TABLE - A-type selection states routed via the Lab"),
     (0x0325, 0x0326, "HOOK_STATE_TABLE_15 - name entry routed via the Lab"),
     (0x0343, 0x0344, "HOOK_STATE_TABLE_24 - copyright screen skipped entirely"),
@@ -124,6 +126,34 @@ def test_extended_gravity_table_contents():
     assert table[22] == 0x00, "M should be 1 frame/row (the engine ceiling)"
 
 
+def test_the_level_select_inits_still_open_with_turn_off_lcd():
+    """The Lab loads their tileset before they run and leaves the LCD off to do
+    it, so it enters them past their own `call TurnOffLCD` rather than turning
+    it back on for them - one window instead of two, and nothing displayed
+    between the swap and the redraw. See LAB_SKIP_TURN_OFF_LCD.
+
+    The skip is three bytes of a specific instruction. Byte-exactness pins the
+    addresses; this pins what is at them.
+    """
+    ref = _build("--original")
+    syms = {}
+    for line in (ROOT / "build" / "tetris.sym").read_text().splitlines():
+        parts = line.split()
+        if len(parts) == 2 and ":" in parts[0]:
+            syms.setdefault(parts[1], int(parts[0].split(":")[1], 16))
+
+    target = syms["TurnOffLCD"]
+    for name in ("GameState10_ATypeSelectionInit",
+                 "GameState12_BTypeSelectionInit"):
+        at = syms[name]
+        op, lo, hi = ref[at], ref[at + 1], ref[at + 2]
+        assert op == 0xCD, f"{name} does not open with a call (${op:02X})"
+        assert (hi << 8) | lo == target, (
+            f"{name} opens with a call to ${(hi << 8) | lo:04X}, "
+            f"not TurnOffLCD (${target:04X})"
+        )
+
+
 def test_lab_cartridge_header():
     d = _build()
     assert d[0x147] == CART_MBC1_RAM_BATTERY, f"cart type ${d[0x147]:02X}"
@@ -150,8 +180,16 @@ def test_the_release_patch_reproduces_the_rom():
     stock = (ROOT / "build" / "tetris.gb").read_bytes()
 
     assert bps[:4] == b"BPS1", f"not a BPS patch: {bps[:4]!r}"
-    assert len(bps) < len(lab) // 8, (
-        f"patch is {len(bps)} bytes against a {len(lab)}-byte ROM - "
+    # One bank. Everything the patch legitimately carries is Lab code, Lab
+    # assets and a handful of hook bytes, all of which live in bank 2 - and BPS
+    # encodes only what differs, so the 32 KB of banks 0-1 the patch is applied
+    # to cost it nothing. A patch bigger than the bank it describes is carrying
+    # something it should not be.
+    #
+    # This was `len(lab) // 8` and Tolstoj's menu tileset went through it: 2 KB
+    # of artwork and a 640-byte layout are exactly what a patch is *for*.
+    assert len(bps) < 0x4000, (
+        f"patch is {len(bps)} bytes, more than the bank it describes - "
         "that is large enough to be carrying game data"
     )
     assert patch.apply(stock, bps) == lab, "the patch does not reproduce the ROM"

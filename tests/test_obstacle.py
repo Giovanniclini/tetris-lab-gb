@@ -53,10 +53,8 @@ SELECTABLE = [0] + list(range(1, OBSTACLE_HEIGHT_MAX + 1)) + \
              list(range(OBSTACLE_RIGHT, OBSTACLE_MAX + 1))
 
 
-def to_row(t, row):
-    t.to_menu()
-    for _ in range(row):
-        t.press("down")
+def to_row(t, mode):
+    t.to_mode(mode)
 
 
 def start(value, level=9, ticks=90):
@@ -389,11 +387,50 @@ def test_the_heights_no_bar_can_cross_are_not_offered():
         )
 
 
-def test_the_row_counts_the_selectable_values_and_wraps():
-    """TetrisGYM's own limit is $20 (MENUSIZES); ours stops at $1E because the
-    last two heights per side cannot be played on an 18-row field. It shows in
-    one cell because the font runs 0-9 then A-Z from $00, so the tile is the
-    value - which is how TetrisGYM shows its range too."""
+def test_the_menu_row_shows_the_height_and_the_wall():
+    """Tolstoj's layout gives the row a letter for the side and bakes an "L"
+    into it, so a right-wall value read as a left-wall one until this drew over
+    it - "$18" showed as "O L", which is the wrong side and not a height either.
+
+    The stored value stays TetrisGYM's, so a number still means the same shape
+    on both ROMs; only the reading of it is split into the two things it means.
+    """
+    MENU_ROW, VALUE_COL, SIDE_COL = 26, 13, 15
+    BRIGHT = 0xC6
+    FONT = {**{i: str(i) for i in range(10)},
+            **{0x0A + i: chr(ord("A") + i) for i in range(26)}, 0x2F: " "}
+
+    def cell(t, col):
+        v = t[0x9800 + MENU_ROW * 32 + col]
+        return FONT[v - BRIGHT] if BRIGHT <= v < BRIGHT + 0x26 else FONT[v]
+
+    with Tetris(ROM) as t:
+        to_row(t, MODE_OBSTACLE)
+        for value in SELECTABLE:
+            t.pb.memory[wLabObstacle] = value
+            t.tick(20)
+
+            if value == 0:
+                # No column, so the value cannot hold a side - the letter comes
+                # from the wall the editor is set to, which starts on the left.
+                want_height, want_side = "0", "L"
+            elif value < OBSTACLE_RIGHT:
+                want_height, want_side = FONT[value], "L"
+            else:
+                want_height, want_side = FONT[value - 0x10], "R"
+
+            assert (cell(t, VALUE_COL), cell(t, SIDE_COL)) == (want_height, want_side), (
+                f"${value:02X}: shows {cell(t, VALUE_COL)!r} {cell(t, SIDE_COL)!r}, "
+                f"wanted {want_height!r} {want_side!r}"
+            )
+
+
+def test_the_row_steps_the_height_and_the_wall_follows():
+    """Left and Right change the number; the wall comes with it, because past
+    the tallest left column is the shortest right one. TetrisGYM's own value
+    order, so a number still means the same shape on both ROMs - and the two
+    heights per side that no bar can cross are stepped over rather than offered.
+    """
     with Tetris(ROM) as t:
         to_row(t, MODE_OBSTACLE)
         seen = [t[wLabObstacle]]
@@ -401,16 +438,39 @@ def test_the_row_counts_the_selectable_values_and_wraps():
             t.press("right")
             seen.append(t[wLabObstacle])
         assert seen == SELECTABLE + [0], [hex(v) for v in seen]
-        t.press("left")
-        assert t[wLabObstacle] == OBSTACLE_MAX, "Left from 0 should wrap to $1E"
 
-        # and back down over the gap, which is a separate branch
+        t.press("left")
+        assert t[wLabObstacle] == OBSTACLE_MAX, "Left from 0 should wrap"
         t.pb.memory[wLabObstacle] = OBSTACLE_RIGHT
         t.press("left")
         assert t[wLabObstacle] == OBSTACLE_HEIGHT_MAX, (
-            f"left from the shortest right wall should reach the tallest left, "
-            f"got ${t[wLabObstacle]:02X}"
+            "left off the shortest right column should reach the tallest left"
         )
+
+
+def test_only_the_number_blinks():
+    """The wall is not what Left and Right are changing, so it should not flash
+    as though it were. It is always drawn, too: a row whose only mark is a
+    nought reads as broken, which is why Tolstoj's layout has "0 L" in it.
+    """
+    MENU_ROW, VALUE_COL, SIDE_COL = 26, 13, 15
+    BRIGHT, TILE_L, TILE_R = 0xC6, 0x15, 0x1B
+
+    with Tetris(ROM) as t:
+        to_row(t, MODE_OBSTACLE)
+        for value, wall in ((0x00, TILE_L), (0x05, TILE_L), (0x15, TILE_R)):
+            t.pb.memory[wLabObstacle] = value
+            nums, walls = set(), set()
+            for _ in range(40):
+                t.tick(1)
+                nums.add(t[0x9800 + MENU_ROW * 32 + VALUE_COL])
+                walls.add(t[0x9800 + MENU_ROW * 32 + SIDE_COL])
+
+            assert len(nums) == 2, f"${value:02X}: the number did not blink: {nums}"
+            assert walls == {wall}, (
+                f"${value:02X}: the wall should be a steady ${wall:02X}, "
+                f"saw {[hex(v) for v in walls]}"
+            )
 
 
 def test_it_stays_in_its_own_mode():
@@ -419,8 +479,7 @@ def test_it_stays_in_its_own_mode():
     with Tetris(ROM) as t:
         to_row(t, MODE_OBSTACLE)
         t.pb.memory[wLabObstacle] = 0x08
-        for _ in range(MODE_OBSTACLE):
-            t.press("up")
+        t.to_mode(MODE_TETRIS)
         assert t[wLabMode] == MODE_TETRIS
         t.press("start")
         t.run_until_state(GS_A_TYPE_SELECTION_MAIN)

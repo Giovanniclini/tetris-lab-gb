@@ -28,9 +28,7 @@ A_TYPE_SELECT, B_TYPE_SELECT = 0x11, 0x13
 def in_game(row=MODE_TETRIS):
     """A game running, started from `row` of the menu."""
     t = Tetris(ROM)
-    t.to_menu()
-    for _ in range(row):
-        t.press("down")
+    t.to_mode(row)
     if row == MODE_CRUNCH:
         for _ in range(10):
             t.press("right")

@@ -403,7 +403,22 @@ ENDC
 ; clear scroll regs, and set interrupt as handled
 	xor  a                                                          ; $01ff
 	ldh  [rSCX], a                                                  ; $0200
+; --- tetris-lab-gb deviation #23 (see src/original/UPSTREAM.md) ---
+; VBlank zeroes rSCY at the end of every frame, so nothing can scroll the
+; background - the Lab menu writes the register and the next VBlank throws it
+; away. Pointed at an HRAM byte the original never reads.
+;
+; One byte, the operand alone: A is still zero here, so the `inc a` below still
+; stores exactly 1 into hVBlankInterruptFinished and the main loop's wait is
+; unchanged. Nothing else in the ROM depends on this write - the only other
+; places rSCY is touched are rSCX beside it and Reset ($0223), and no original
+; screen ever sets it non-zero. The Lab clears it on the way out of the menu.
+IF LAB
+	ldh  [hUnusedFFA4], a
+ELSE
 	ldh  [rSCY], a                                                  ; $0202
+ENDC
+; --- end deviation #23 ---
 
 	inc  a                                                          ; $0204
 	ldh  [hVBlankInterruptFinished], a                              ; $0205
@@ -736,7 +751,18 @@ ELSE
 	dw GameState11_ATypeSelectionMain
 ENDC
 ; --- end deviation #5 ---
+; --- tetris-lab-gb deviation #24 (see src/original/UPSTREAM.md) ---
+; Routed through the Lab so the B-type level select loads the tileset it draws
+; in. GameState08_GameMusicTypeInit ($1452) was the only place in the ROM that
+; loaded it, and everything downstream inherited - but the Lab menu replaced
+; that screen and loads its own artwork instead. Both level selects have to
+; fetch their own now, inside the LCD-off window their init already opens.
+IF LAB
+	dw LabStateHook
+ELSE
 	dw GameState12_BTypeSelectionInit
+ENDC
+; --- end deviation #24 ---
 	dw GameState13_BTypeSelectionMain
 	dw GameState14_BTypeHighMain
 ; --- tetris-lab-gb deviation #11 (see src/original/UPSTREAM.md) ---

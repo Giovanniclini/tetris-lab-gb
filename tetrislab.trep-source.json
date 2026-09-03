@@ -226,11 +226,11 @@
     },
     {
       "name": "Lab Menu",
-      "symbol": "LabMenuScreen",
+      "symbol": "LabMenuMap",
       "width": 20,
-      "height": 18,
+      "height": 32,
       "tileSet": "Game Play-Set",
-      "filename": "labMenuScreen.bin"
+      "filename": "labMenuMap.bin"
     }
   ]
 }

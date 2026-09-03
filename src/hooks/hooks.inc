@@ -133,6 +133,30 @@
 ;                                            linker's own empty gap, not an
 ;                                            insertion.
 ;
+;   HOOK_STATE_TABLE12 $031F-$0320       2  Jump-table entry for $12, the
+;                                            B-type level select. The Lab draws
+;                                            nothing there - it is hooked only
+;                                            to load the tileset the screen
+;                                            draws in. GameState08 ($1452) was
+;                                            the one place in the ROM that
+;                                            loaded it and everything after
+;                                            inherited; the Lab menu replaced
+;                                            that screen and loads its own
+;                                            artwork, so both level selects now
+;                                            fetch their own.
+;   HOOK_VBLANK_SCY   $0203               1  The operand of the VBlank handler's
+;                                            `ldh [rSCY], a`, pointed at
+;                                            hUnusedFFA4. VBlank zeroes the
+;                                            scroll register every frame, so
+;                                            without this nothing can scroll the
+;                                            background - and the Lab menu is a
+;                                            list taller than the screen. A is
+;                                            still zero there, so the `inc a`
+;                                            after it still puts 1 in
+;                                            hVBlankInterruptFinished. No
+;                                            original screen sets rSCY, and
+;                                            Reset clears it separately.
+;
 ; Nothing else in banks 0-1 may change.
 ;
 ; Note the shape of these: we redirect pointers and constants into space we

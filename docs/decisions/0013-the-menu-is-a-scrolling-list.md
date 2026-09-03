@@ -75,6 +75,10 @@ role only while `hGameState` is `$07`, so the title screen keeps the artwork,
   It watches from the press frame itself to the destination now, over a row deep
   enough to have scrolled, and asserts the map, the tiles and the scroll all
   agree rather than that the frames are blank.
+* **The version is drawn, not drawn in.** Tolstoj's first layouts had it baked,
+  which is right on the day the file is cut and stale from the next release. It
+  is written at init now, right-aligned against the header box's edge, the same
+  rule the title screen uses — so a release needs no new layout from him.
 * **The cursor is a sprite, and the drawn ones come out.** Tolstoj draws a
   cursor into his layouts — on the title screen the artwork's own arrow *is* the
   cursor. Here the list scrolls under the cursor, so a cell in the map scrolls

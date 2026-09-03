@@ -382,12 +382,10 @@ DEF MENU_STRIDE     EQU 1 * 32                ; one row per entry
 DEF MENU_TEXT_COL   EQU 2                     ; label starts 2 cells in
 DEF MENU_VALUE_COL  EQU 13                    ; the row's value, right of it
 
-; Six hex digits will not fit where the other rows put their value: the menu
-; starts at column 3, so MENU_VALUE_COL lands on column 16 and four digits
-; already reach the right edge of the screen. The seed row alone starts two
-; cells earlier. Its label ends at column 8, so nothing is in the way, and no
-; other row moves.
-DEF MENU_SEED_COL   EQU 11
+; The seed's six digits start where every other row's value does: Tolstoj's
+; layout gives the value six cells on every row, so nothing has to move over
+; for them any more.
+DEF MENU_SEED_COL   EQU MENU_VALUE_COL
 DEF SEED_DIGITS     EQU 6
 ; The original's arrow, put where nothing else lives. Neither Lab screen's
 ; tileset reaches $FF with anything it draws, and every screen reloads its

@@ -35,6 +35,7 @@ HEART_CELL = 0x9800 + 4 * 32 + 14
 SPRITE_HIDDEN_BYTE = 0xC200
 
 TILE_HEART, TILE_FRAME, TILE_BLANK = 0x27, 0x2C, 0x2F
+BRIGHT = 0xC6                   # the light alphabet, one plane cleared
 MAX_LEVEL = 22
 
 GRAVITY = [53, 49, 45, 41, 37, 33, 28, 22, 17, 11,
@@ -110,9 +111,7 @@ def test_the_level_select_says_which_mode_it_is_setting_up():
 
     def header(row):
         with Tetris(ROM) as t:
-            t.to_menu()
-            for _ in range(row):
-                t.press("down")
+            t.to_mode(row)
             t.press("start")
             t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
             t.tick(30)
@@ -132,9 +131,7 @@ def test_the_level_select_says_which_mode_it_is_setting_up():
     def spaced(row, word):
         """The word, with a blank on each side of it."""
         with Tetris(ROM) as t:
-            t.to_menu()
-            for _ in range(row):
-                t.press("down")
+            t.to_mode(row)
             t.press("start")
             t.run_until_state(GS_A_TYPE_SELECTION_MAIN)
             t.tick(30)
@@ -200,7 +197,31 @@ def test_picker_blinks_only_while_it_has_focus():
         for _ in range(40):
             t.tick(1)
             seen.add(t[PICKER_CELL])
-        assert seen == {12}, f"should be steady once unfocused, saw {seen}"
+        assert seen == {12 + BRIGHT}, f"should be steady once unfocused, saw {seen}"
+
+
+def test_the_picker_is_grey_while_the_grid_has_focus():
+    """The same thing the menu says about a value you are not editing, and the
+    same thing the grid says about a cell its cursor is not on: still there,
+    still readable, not the one you are changing.
+
+    The light alphabet is the font with one bitplane cleared, so the glyph is
+    the level number plus the offset - see LAB_BRIGHT.
+    """
+    with Tetris(ROM) as t:
+        open_picker(t)
+        for level in (10, 16, 22):
+            picker_to(t, level)
+            t.press("left")                   # back to the grid
+            seen = set()
+            for _ in range(40):
+                t.tick(1)
+                seen.add(t[PICKER_CELL])
+            assert seen == {level + BRIGHT}, (
+                f"level {level}: expected a steady ${level + BRIGHT:02X}, "
+                f"saw {[hex(v) for v in seen]}"
+            )
+            t.press("right")                  # and back into the picker
 
 
 def test_grid_cursor_is_hidden_while_the_picker_has_focus():

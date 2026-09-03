@@ -17,3 +17,4 @@ choice would otherwise have to be re-derived — or, worse, silently reversed.
 | [10](0010-seeds-are-toni-24-bit.md) | Seeds are Toni's 24-bit LFSR, six hex digits |
 | [11](0011-lab-code-is-modular.md) | Lab code is many small files, textually included into one section |
 | [12](0012-trep-designs-the-screens.md) | TREP designs the screens, and Lab layouts live in bank 2 |
+| [13](0013-the-menu-is-a-scrolling-list.md) | The menu is a scrolling list, drawn from Tolstoj's layout |

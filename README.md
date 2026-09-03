@@ -118,10 +118,16 @@ here because the original's serial code only pairs two Game Boys from this scree
 A trainer's level select says so in the corner where the original writes `A-TYPE` — the word
 comes from the same string as the menu row, so the two cannot disagree.
 
-The A-TYPE/B-TYPE screen is the Lab menu, modelled on
-[TetrisGYM's](https://github.com/kirjavascript/TetrisGYM): one list, playable modes first,
-settings after, each row carrying its own value. `Up`/`Down` move, `Left`/`Right` change the
-value on the row, `Start` launches.
+The A-TYPE/B-TYPE screen is the Lab menu: **one list, taller than the screen**, grouped under
+`STANDARD`, `COMPETITION` and `TRAINING`, scrolling under the cursor once the selection passes the
+middle. `Up`/`Down` move — held, they auto-repeat — `Left`/`Right` change the value on the row, and
+`Start` launches. The selected row's value blinks.
+
+The layout is **Tolstoj's**, drawn in [TREP](https://tolstoj-82.github.io/apps/trep/), and so is the
+tileset it indexes. It has room for the modes that are not built yet.
+
+`B` on a level select comes back here, to the row you launched from and the view you left it
+scrolled to.
 
 ### Tetris
 
@@ -129,6 +135,8 @@ value on the row, `Start` launches.
 
 A-Type, with the original grid untouched and a picker beside it: `Right` off cell `9` to reach
 it, then `Up`/`Down` for `0`–`9` and `A`–`M`. `M` is one row per frame, the engine's ceiling.
+The picker greys while the grid has focus and blinks while it has focus itself — the same thing
+the grid says with its own flashing cursor.
 
 `Select` toggles **hearts** — the original's hidden `Down`+`Start`, made visible, with an
 indicator beside `LEVEL`. They add ten levels of speed, and are withheld above level 20 because
@@ -200,9 +208,14 @@ One column against one wall, a bar every time, and the board rebuilt for every p
 a single skill: stand the bar up and get it into the well beside the column before it lands, which
 past level 19 is a tap rather than a charge.
 
-**`1`–`$0E` is the left wall that many rows tall, `$11`–`$1E` the right.** The value is
-[TetrisGYM's](https://github.com/kirjavascript/TetrisGYM) own — they call the mode `QCKTAP` — and it
-shows in one cell the same way, the font running `0`–`9` then `A`–`Z` from tile zero.
+`Left`/`Right` set **how tall the column is**, and the wall it stands against comes with it: past
+the tallest left column is the shortest right one. Only the number blinks, because only the number
+is what you are changing.
+
+What is stored is [TetrisGYM's](https://github.com/kirjavascript/TetrisGYM) single value — they call
+the mode `QCKTAP`, and `1`–`$0E` is the left wall that many rows tall, `$11`–`$1E` the right — so a
+number means the same shape on both ROMs. The row reads it out as the two things it means, and the
+heights no bar can cross are stepped over rather than offered.
 
 Fourteen rows rather than their sixteen, and that is the same rule rather than a different one: a
 standing bar is four rows, so it can only cross the column if the column's top is at row 4 or below.

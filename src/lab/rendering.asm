@@ -118,3 +118,41 @@ LabPutDigits4::
 	dec  b
 	jr   nz, .next
 	ret
+
+
+; ---------------------------------------------------------------------------
+; The bright alphabet
+;
+; A tile row is two bytes - the low bitplane then the high one - so copying the
+; font with the high plane zeroed leaves every glyph in the lighter shade
+; instead of the darkest. LAB_FONT_TILES glyphs, from $00 to LAB_BRIGHT.
+;
+; VRAM, so the LCD must be off. Both callers are screen inits, which is the only
+; time it is.
+; ---------------------------------------------------------------------------
+
+; Where the block lands, as a byte a test can read. A constant duplicated into
+; the test is a constant that can be wrong in one place: the first version of
+; the collision test carried its own copy and passed against the wrong range.
+LabBrightBase::
+	db LAB_BRIGHT
+
+
+LabMakeBrightFont::
+	ld   hl, _VRAM
+	ld   de, _VRAM + LAB_BRIGHT * 16
+	ld   bc, LAB_FONT_TILES * 8     ; rows, not tiles
+
+.nextRow:
+	ld   a, [hl+]
+	ld   [de], a                    ; the plane that stays
+	inc  de
+	inc  hl
+	xor  a
+	ld   [de], a                    ; and the one that goes
+	inc  de
+	dec  bc
+	ld   a, b
+	or   c
+	jr   nz, .nextRow
+	ret

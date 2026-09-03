@@ -22,6 +22,7 @@ GFX = {
 # vendored: nothing here may change a byte of the LAB=0 build.
 LAB_GFX = {
     "labTitleScreen.2bpp": ("../lab/gfx/2bpp/labTitleScreen.png", [], 2048),
+    "labMenuTiles.2bpp": ("../lab/gfx/2bpp/labMenuTiles.png", [], 2048),
 }
 
 

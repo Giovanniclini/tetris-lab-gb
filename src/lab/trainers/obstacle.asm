@@ -41,6 +41,44 @@ DEF OBSTACLE_BOTTOM_ROW EQU GAME_SCREEN_ROWS - 1
 ; produced itself.
 DEF OBSTACLE_PIECE_I    EQU $08
 
+; The two things the value encodes, for the menu row that edits them.
+DEF OBSTACLE_HEIGHT     EQU 0
+DEF OBSTACLE_SIDE       EQU 1
+DEF OBSTACLE_FIELDS     EQU 2
+
+
+; a = the height the value stands for, 0 to OBSTACLE_HEIGHT_MAX.
+LabObstacleHeight::
+	ld   a, [wLabObstacle]
+	cp   OBSTACLE_RIGHT
+	ret  c                          ; the left wall: the value is the height
+	sub  OBSTACLE_RIGHT - 1
+	ret
+
+
+; Carry when the column stands against the left wall.
+LabObstacleOnLeft::
+	ld   a, [wLabObstacle]
+	cp   OBSTACLE_RIGHT
+	ret
+
+
+; b = a height, c = nonzero for the right wall. Stores the value they mean.
+; A height of zero is no column at all, so it has no side to be on.
+LabObstacleStore::
+	ld   a, b
+	and  a
+	jr   z, .store
+	ld   a, c
+	and  a
+	ld   a, b
+	jr   z, .store
+	add  OBSTACLE_RIGHT - 1
+
+.store:
+	ld   [wLabObstacle], a
+	ret
+
 
 ; The playfield cleared, then the column. Buffer only - plain WRAM, no waiting
 ; on the LCD - so this is cheap enough to do whole rather than work out which

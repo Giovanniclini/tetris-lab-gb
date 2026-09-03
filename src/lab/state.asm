@@ -67,6 +67,16 @@ wLabATypeHighScoresExt::
 SECTION "Lab State", WRAM0[$D8C1]
 wLabState::
 
+; The Lab menu's own cursor: which entry of the scrolling list it is on, how
+; far the list has scrolled, and the auto-repeat counter for Up/Down. wLabMode
+; still holds the mode that entry selects, so everything downstream of the menu
+; is unchanged by the list growing sections and settings rows.
+wLabMenuRow::    db
+wLabMenuScroll:: db
+wLabMenuDas::    db
+wLabMenuBright:: db        ; tile offset for the row being painted: the bright
+                           ; block while the selected row is on its lit half
+
 ; Level picker, shown in a single cell to the right of the original 0-9 grid.
 wLabFocus::        db        ; 0 grid, 1 level
 wLabPickerLevel::  db        ; 0-22, shown as 0-9 then A-M
@@ -109,8 +119,8 @@ wLabCrunch::      db        ; CRUNCH's width, TetrisGYM's own value: every 4 is
                            ; a column off the left, every 1 off the right
 wLabCrunchPending:: db     ; set at game init, consumed on the first game frame
 wLabCrunchRowsToSend:: db  ; rows of the crunch columns still to reach the screen
-wLabObstacle::        db        ; OBSTACLE's column, TetrisGYM's own value: 1-$10 is
-                           ; the left wall that many rows tall, $11-$20 the right
+wLabObstacle::        db        ; OBSTACLE's column, TetrisGYM's own value: 1-$0E is
+                           ; the left wall that many rows tall, $11-$1E the right
 wLabObstaclePending:: db       ; set at game init, consumed on the first game frame
 wLabObstacleWasSettling:: db   ; last frame's hPieceFallingState, to catch the edge
                            ; back to NONE that means a new piece
@@ -164,7 +174,7 @@ wLabScoreZeroMoved:: db
 ; them. See LabFileHighScore.
 wLabHiScoreMillions:: ds (MAX_LEVEL + 1) * 3
 
-	ds 912
+	ds 908
 wLabStateEnd::
 
 ; The TRANSITION row's top value, shown as F. TetrisGYM has one more, G, which

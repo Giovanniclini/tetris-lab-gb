@@ -18,6 +18,7 @@ from tools.emu import Tetris, sym, hATypeLevel, GS_IN_GAME_MAIN  # noqa: E402
 from tools.lfsr import step as lfsr_step  # noqa: E402
 
 ROM = "build/tetrislab.gb"
+MODE_TETRIS, MODE_SEED = 0, 5
 
 # The piece being played, as the game itself names it: wSpriteSpecs +
 # SPR_SPEC_SpecIdx. Spec indexes are piece * 4 + rotation, so the low two bits
@@ -224,17 +225,14 @@ def test_the_same_seed_deals_the_same_sequence_after_a_game():
     played before it. Reported by Tolstoj, 2026-08-21."""
     def seeded_game(play_first):
         t = Tetris(ROM)
-        t.to_menu()
-        for _ in range(5):
-            t.press("down")                    # SEED
+        t.to_mode(MODE_SEED)
         t.press("a")
         for nibble in (0x1, 0x1, 0x9, 0x9, 0x8, 0xF):
             for _ in range(nibble):
                 t.press("up")
             t.press("right")
         t.press("a")
-        for _ in range(5):
-            t.press("up")                      # back to TETRIS
+        t.to_mode(MODE_TETRIS)
         t.press("start")
         t.run_until_state(0x11)
         t.tick(20)
@@ -271,17 +269,14 @@ def test_seed_can_be_entered_from_the_menu():
     """The SEED row of the Lab menu: A opens the digits, Left/Right pick one,
     Up/Down change it. See docs/decisions/0007."""
     with Tetris(ROM) as t:
-        t.to_menu()
-        for _ in range(5):
-            t.press("down")                    # TETRIS -> ... -> SEED
+        t.to_mode(MODE_SEED)
         t.press("a")                           # open the digits
         for nibble in (0x1, 0x1, 0x9, 0x9, 0x8, 0xF):
             for _ in range(nibble):
                 t.press("up")
             t.press("right")
         t.press("a")                           # close them
-        for _ in range(5):
-            t.press("up")                      # back up to TETRIS
+        t.to_mode(MODE_TETRIS)
         seed = (t[wLabSeedHi] << 16) | (t[wLabSeedMid] << 8) | t[wLabSeedLo]
         assert seed == 0x11998F, f"typed $11998F, got ${seed:06X}"
 
@@ -316,9 +311,7 @@ def test_every_mode_deals_the_same_sequence_for_a_seed():
 
     def played(row, frames=3000):
         with Tetris(ROM) as t:
-            t.to_menu()
-            for _ in range(row):
-                t.press("down")
+            t.to_mode(row)
             for _ in range(5):                       # give the row a value
                 t.press("right")
             t.pb.memory[wLabSeedHi] = (SEED >> 16) & 0xFF

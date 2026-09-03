@@ -73,11 +73,13 @@ def shoot(t, name):
     print(f"  assets/screens/{name}.png")
 
 
-def goto(t, row, mode_addr):
-    for _ in range(16):
-        if t[mode_addr] == row:
+def goto(t, mode, mode_addr):
+    """The row that selects `mode`. Down only: the list is Tolstoj's layout, so
+    its row order has nothing to do with the mode numbering."""
+    for _ in range(20):
+        if t[mode_addr] == mode:
             return
-        t.press("down" if t[mode_addr] < row else "up")
+        t.press("down")
 
 
 def main():

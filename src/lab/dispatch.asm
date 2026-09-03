@@ -50,6 +50,8 @@ LabDispatch::
 	jr   z, .gameInit
 	cp   GS_A_TYPE_SELECTION_INIT
 	jr   z, .init
+	cp   GS_B_TYPE_SELECTION_INIT
+	jr   z, .bTypeInit
 	cp   GS_TITLE_SCREEN_MAIN
 	jp   z, .titleMain
 	cp   GS_TITLE_SCREEN_INIT
@@ -76,7 +78,14 @@ LabDispatch::
 
 .init:
 	call LabLevelSelectInit
-	ld   hl, GameState10_ATypeSelectionInit
+	ld   hl, GameState10_ATypeSelectionInit + LAB_SKIP_TURN_OFF_LCD
+	ret
+
+; B-type's level select. The Lab draws nothing on it - it is here only to fetch
+; the tileset, which the screen that used to fetch it is now the Lab menu.
+.bTypeInit:
+	call LabLoadScreenGfx
+	ld   hl, GameState12_BTypeSelectionInit + LAB_SKIP_TURN_OFF_LCD
 	ret
 
 ; The end-of-game screen. Its handler treats Start as "back to the level
@@ -283,6 +292,33 @@ LabDispatch::
 ; A seed of $0000 means "no seed", so SPS is off and pieces come from rDIV as
 ; they always did - which is genuinely random, so there is nothing to randomise.
 ; ---------------------------------------------------------------------------
+
+; The bright half of the alphabet: a copy of the font with one bitplane cleared,
+; which is the same glyphs in the lighter Game Boy shade. Made at init by
+; LabMakeBrightFont, and used wherever something has to read as present but not
+; active - a blinking menu value, an unfocused field. Tolstoj's trick, and it
+; costs no artwork.
+;
+; The font is 0-9, A-Z, a dot and a dash, contiguous from $00, so one offset
+; reaches every bright glyph.
+;
+; $C6 because every lower gap has something in it. $A0 looked free from the
+; menu, the level select and the game - and was not: the game over screen
+; underlines GAME and OVER with $AD, so those two words grew a row of faint Ds.
+; $C6 up is the only run long enough that no screen draws into. See
+; tests/test_labmenu.py, which walks them and checks rather than trusting this.
+
+; Both level select inits open with `call TurnOffLCD`, three bytes. The Lab
+; loads their tileset before they run and has to leave the LCD off to do it, so
+; they are entered past that call rather than turning it back on for them - one
+; window instead of two, and nothing displayed in between. ADR 0009 is the
+; general case; this one has no register contract at all, it just skips a call
+; whose effect has already happened. tests/test_expansion.py checks both entry
+; points really do begin with it.
+DEF LAB_SKIP_TURN_OFF_LCD EQU 3
+
+DEF LAB_FONT_TILES EQU $26
+DEF LAB_BRIGHT     EQU $c6
 
 DEF PICKER_CELL   EQU _SCRN0 + 6 * 32 + 16
 DEF HEART_CELL    EQU _SCRN0 + 4 * 32 + 14

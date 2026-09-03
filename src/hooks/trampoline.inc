@@ -12,6 +12,12 @@
 ;
 ; The original game already writes 1 to $2000 during init (verified at $0252),
 ; which on MBC1 selects bank 1 - the correct default. See docs/research.md 3.6.
+;
+; hLabBank starts at zero, and the restore below used to write that back. On
+; MBC1 a write of 0 selects bank 1, so it happened to be right; on MBC5 it
+; selects bank 0 and maps it over $4000-$7FFF, where the sound engine, the
+; ascii tiles and LabRandom live. Tolstoj's flash carts are MBC5. Writing 1
+; instead is correct on both, and identical to what MBC1 was already doing.
 
 FarCall::
 	ldh  a, [hLabBank]
@@ -22,6 +28,11 @@ FarCall::
 	call .jumpHL
 	ld   b, a               ; preserve the far routine's return value
 	pop  af                 ; a = previous bank (flags clobbered)
+	and  a
+	jr   nz, .haveBank
+	inc  a                  ; never select bank 0: see above
+
+.haveBank:
 	ldh  [hLabBank], a
 	ld   [$2000], a
 	ld   a, b

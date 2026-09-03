@@ -238,6 +238,35 @@ def test_screens_downstream_of_the_title_get_the_menu_tileset():
         assert got == want, "the game is showing another screen's tiles"
 
 
+def test_the_menu_header_shows_the_version_the_rom_carries():
+    """The layout used to have the version drawn into it, so it was right on the
+    day it was cut and stale from the next release. Drawn by code now, the way
+    the title screen's is, and right-aligned against the header box's edge so a
+    version that grows a character takes a gap cell rather than the edge.
+    """
+    rom = (ROOT / "build" / "tetrislab.gb").read_bytes()
+    syms = {}
+    for line in (ROOT / "build" / "tetrislab.sym").read_text().splitlines():
+        parts = line.split()
+        if len(parts) == 2 and ":" in parts[0]:
+            bank, addr = parts[0].split(":")
+            syms.setdefault(parts[1], (int(bank, 16), int(addr, 16)))
+    bank, addr = syms["LabVersion"]
+    off = addr if bank == 0 else bank * 0x4000 + addr - 0x4000
+    version = rom[off:off + 40].split(b"\x00")[0].decode().split()[-1]
+
+    EDGE, ROW = 11, 0x9800 + 4 * 32
+    tile = {".": 0x24, **{str(d): d for d in range(10)}}
+    with Tetris(ROM) as t:
+        to_menu(t)
+        first = EDGE - len(version)
+        got = [t[ROW + first + i] for i in range(len(version))]
+        assert got == [tile[c] for c in version], (
+            f"the header shows {got}, the ROM says {version}"
+        )
+        assert t[ROW + EDGE] != tile.get("0"), "the version ran over the box edge"
+
+
 def test_the_title_screen_shows_the_version_the_rom_carries():
     """The version is drawn over the artwork rather than stored in it, so a
     release bumps LAB_VERSION and nothing else - no new layout from the artist.

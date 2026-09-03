@@ -36,6 +36,16 @@ DEF MENU_DAS_REPEAT  EQU 8
 ; Where his sheet lands, matching the title screen's: the first tile after the
 ; font. Its last seven tiles run under the bright alphabet below, and the layout
 ; does not reach them.
+; The version, in the header box: drawn rather than drawn *in*, so a release
+; needs no new layout from the artist. Right-aligned against the box's right
+; edge, the same rule the title screen uses - VERSION_LEN comes from the string
+; itself, so a version that grows a character takes a gap cell rather than the
+; edge.
+DEF MENU_VERSION_EDGE EQU 11
+DEF MENU_VERSION_CELL EQU _SCRN0 + 4 * 32 + MENU_VERSION_EDGE - VERSION_LEN
+
+ASSERT VERSION_LEN <= 6, "the menu header leaves six cells for the version"
+
 DEF MENU_TILE_FIRST  EQU $27
 DEF MENU_TILE_COUNT  EQU 128
 
@@ -385,6 +395,17 @@ LabMenuDraw::
 
 	call LabMenuBlankUnbuilt
 	call LabMenuBlankBakedCursors
+
+; The LCD is off, so these go straight down.
+	ld   hl, LabTitleVersion
+	ld   de, MENU_VERSION_CELL
+	ld   b, VERSION_LEN
+.version:
+	ld   a, [hl+]
+	ld   [de], a
+	inc  de
+	dec  b
+	jr   nz, .version
 
 ; The cursor stays where it was. Coming back from a level select should find
 ; the row you launched from, scrolled the way you left it - the loop is "set it

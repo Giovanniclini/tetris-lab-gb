@@ -151,12 +151,26 @@ FarCall::           ; in: b = target bank, hl = target address
     ld   [$2000], a          ; MBC1 ROM bank select
     call .jump_hl
     pop  af
+    and  a                   ; never select bank 0 - see below
+    jr   nz, .have_bank
+    inc  a
+.have_bank:
     ld   [hCurrentBank], a
     ld   [$2000], a
     ret
 .jump_hl:
     jp   hl
 ```
+
+**The restore must never write zero.** `hCurrentBank` starts at zero, so the
+first far call used to write that back. MBC1 remaps a bank-select of 0 to 1, so
+it was accidentally right; **MBC5 does not**, and maps bank 0 over `$4000-$7FFF`
+— where the sound engine, the ascii tiles and `LabRandom` live. Half of every
+session's bank writes were zero. Writing 1 instead is correct on both, which
+keeps the mapper choice open (D9) rather than baking MBC1 into the code.
+
+An emulator cannot catch this while the header says MBC1, because it performs
+the remap itself: `tests/test_behaviour.py` watches the value at the write.
 
 `hCurrentBank` must live in **HRAM**, but HRAM has only 2 free bytes (`$FFFD–$FFFE`).
 `$FFFD` is the natural home. This is one of the few genuinely tight resources — see §6.

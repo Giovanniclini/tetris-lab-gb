@@ -347,6 +347,41 @@ def test_the_score_has_an_honest_ceiling():
         assert score == 99999999, f"expected the ceiling, got {score}"
 
 
+
+def test_the_trampoline_never_selects_bank_zero():
+    """hLabBank starts at zero and the restore writes it back, so the first far
+    call used to put a 0 into $2000. On MBC1 that selects bank *1* - the remap
+    made it accidentally right. On MBC5 it selects bank 0 and maps it over
+    $4000-$7FFF, where the sound engine, the ascii tiles and LabRandom live.
+
+    Tolstoj's flash carts are MBC5, so this was a real failure waiting on real
+    hardware rather than a theoretical one.
+
+    Watched at the write, not at hLabBank and not at the mapped bank: PyBoy
+    emulates the header's MBC1, so it performs the 0 -> 1 remap itself and the
+    wrong value is invisible everywhere downstream of it.
+    """
+    rom = (ROOT / "build" / "tetrislab.gb").read_bytes()
+    LD_2000_A = bytes((0xEA, 0x00, 0x20))       # ld [$2000], a
+    sites = [i for i in range(0x00DA, 0x0100 - 2)
+             if rom[i:i + 3] == LD_2000_A]
+    assert sites, "no bank-select write found in the trampoline"
+
+    with Tetris("build/tetrislab.gb") as t:
+        wrote = []
+        for at in sites:
+            t.pb.hook_register(0, at, lambda ctx: wrote.append(t.pb.register_file.A), None)
+
+        t.start_game_at(9)      # the title, the menu, the level select, a game
+        t.tick(120)
+
+    assert wrote, "the trampoline never switched banks"
+    assert 0 not in wrote, (
+        f"the trampoline selected bank 0 {wrote.count(0)} times out of "
+        f"{len(wrote)} - fine on MBC1, fatal on MBC5"
+    )
+
+
 TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
 
 if __name__ == "__main__":
